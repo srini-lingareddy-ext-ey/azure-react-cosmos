@@ -121,10 +121,13 @@ jobs:
         env:
           AZURE_CREDENTIALS: ${{ secrets.AZURE_CREDENTIALS }}
 
-      - name: Provision Infrastructure
+      # Bicep (infra/main.bicep): App Service plan + Linux Web App (React) + Linux API App Service,
+      # Cosmos DB, Key Vault, Redis, Application Insights, RBAC, optional APIM.
+      - name: Provision infrastructure (Web App + API + data plane)
         run: azd provision --no-prompt
         env:
           AZD_INITIAL_ENVIRONMENT_CONFIG: ${{ secrets.AZD_INITIAL_ENVIRONMENT_CONFIG }}
 
-      - name: Deploy Application
+      # Deploys azure.yaml services: web → Web App, api → API App Service (zip deploy).
+      - name: Deploy application (web + api)
         run: azd deploy --no-prompt

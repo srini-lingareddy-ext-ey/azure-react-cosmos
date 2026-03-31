@@ -1,6 +1,6 @@
 // Main Bicep orchestration - coordinates all resource deployments per AC-FOUNDATION-019.1.
-// Uses abbreviations.json for naming; deploys App Service (API), Cosmos DB, Key Vault, Redis,
-// Application Insights, Static Web Apps, RBAC, and optional APIM.
+// Uses abbreviations.json for naming; deploys App Service Plan + Web (React) + API, Cosmos DB,
+// Key Vault, Redis, Application Insights, RBAC, and optional APIM.
 
 targetScope = 'subscription'
 
@@ -23,8 +23,8 @@ param logAnalyticsName string = ''
 param keyVaultName string = ''
 param cosmosAccountName string = ''
 param appServiceName string = ''
+param webAppServiceName string = ''
 param redisName string = ''
-param staticWebAppName string = ''
 param apimServiceName string = ''
 
 @description('Use Azure API Management to mediate calls between frontend and backend API.')
@@ -92,21 +92,7 @@ module cosmos './modules/cosmos-db.bicep' = {
   }
 }
 
-// Static Web App for React frontend (deploy before App Service so CORS can reference its hostname)
-module staticWebApp './modules/static-web-app.bicep' = {
-  name: 'staticwebapp'
-  scope: rg
-  params: {
-    environmentName: environmentName
-    location: location
-    tags: tags
-    appLocation: 'src/web'
-    outputLocation: 'dist'
-    staticWebAppName: !empty(staticWebAppName) ? staticWebAppName : ''
-  }
-}
-
-// App Service Plan + API App Service (depends on Key Vault, App Insights, Cosmos, Static Web App for CORS)
+// App Service Plan + Web App (React) + API App Service (CORS / API_ALLOW_ORIGINS use web hostname)
 module appService './modules/app-service.bicep' = {
   name: 'api-appservice'
   scope: rg
@@ -118,10 +104,10 @@ module appService './modules/app-service.bicep' = {
     keyVaultName: keyVault.outputs.name
     appServicePlanSku: appServicePlanSku
     appServiceName: !empty(appServiceName) ? appServiceName : ''
+    webAppServiceName: !empty(webAppServiceName) ? webAppServiceName : ''
     additionalAppSettings: {
       AZURE_COSMOS_ENDPOINT: cosmos.outputs.endpoint
       AZURE_COSMOS_DATABASE_NAME: cosmos.outputs.databaseName
-      API_ALLOW_ORIGINS: 'https://${staticWebApp.outputs.defaultHostname}'
     }
     allowedOrigins: []
   }
@@ -184,7 +170,7 @@ output AZURE_KEY_VAULT_NAME string = keyVault.outputs.name
 output AZURE_LOCATION string = location
 output AZURE_TENANT_ID string = tenant().tenantId
 output API_BASE_URL string = useAPIM ? apim!.outputs.gatewayUrl : 'https://${appService.outputs.defaultHostname}'
-output REACT_APP_WEB_BASE_URL string = 'https://${staticWebApp.outputs.defaultHostname}'
+output REACT_APP_WEB_BASE_URL string = 'https://${appService.outputs.webDefaultHostname}'
 output USE_APIM bool = useAPIM
 output SERVICE_API_ENDPOINTS array = useAPIM ? [ apim!.outputs.gatewayUrl, 'https://${appService.outputs.defaultHostname}' ] : []
 output REDIS_HOST string = redis.outputs.hostName

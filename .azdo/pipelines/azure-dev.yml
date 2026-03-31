@@ -29,8 +29,9 @@ steps:
       azd config set auth.useAzCliAuth "true"
     displayName: Configure AZD to Use AZ CLI Authentication.
 
+  # Bicep provisions App Service plan, Linux Web App (React), API App Service, Cosmos, Key Vault, Redis, etc.
   - task: AzureCLI@2
-    displayName: Provision Infrastructure
+    displayName: Provision infrastructure (Web App + API + data plane)
     inputs:
       azureSubscription: azconnection
       scriptType: bash
@@ -44,7 +45,7 @@ steps:
       AZD_INITIAL_ENVIRONMENT_CONFIG: $(secrets.AZD_INITIAL_ENVIRONMENT_CONFIG)
 
   - task: AzureCLI@2
-    displayName: Deploy Application
+    displayName: Deploy application (web + api to App Service)
     inputs:
       azureSubscription: azconnection
       scriptType: bash
