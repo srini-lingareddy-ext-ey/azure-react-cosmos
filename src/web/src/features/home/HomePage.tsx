@@ -7,7 +7,7 @@ const HomePage: FC = () => {
         <Stack tokens={stackPadding}>
             <Text variant="xxLarge">Add your own application code</Text>
             <Text variant="medium">
-                This is a minimal scaffold with React, C# API, and Cosmos DB. Replace this page and add your own features.
+                This is a good start for a minimal scaffold with React, C# API, and Cosmos DB. Replace this page and add your own features.
                 See the README or <a href="https://learn.microsoft.com/azure/developer/azure-developer-cli/">Azure Developer CLI docs</a> to get started.
             </Text>
         </Stack>
