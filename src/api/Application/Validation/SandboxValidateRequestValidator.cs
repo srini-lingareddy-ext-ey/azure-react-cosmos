@@ -3,12 +3,9 @@ using Todo.Api.Application.Transport;
 
 namespace Todo.Api.Application.Validation;
 
-/// <summary>
-/// Example transport validator (AC-FOUNDATION-008). Copy this pattern for <c>CreateXRequestValidator</c>, etc.
-/// </summary>
-public sealed class ValidationDemoRequestValidator : TransportValidatorBase<ValidationDemoRequest>
+public sealed class SandboxValidateRequestValidator : TransportValidatorBase<SandboxValidateRequest>
 {
-    public ValidationDemoRequestValidator()
+    public SandboxValidateRequestValidator()
     {
         RuleFor(x => x.Message)
             .NotEmpty()

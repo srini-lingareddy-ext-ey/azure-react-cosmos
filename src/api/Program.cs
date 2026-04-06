@@ -44,7 +44,7 @@ if (!builder.Environment.IsDevelopment())
     }
 }
 
-// TODO: Register Application services
+// Application services: register domain use cases here as they are introduced (demo ItemService removed in WO-3).
 
 // AC-FOUNDATION-003: JWT bearer authentication with Microsoft Entra ID; 401/403 standardized responses; Admin role policy
 builder.Services.AddJwtAuthentication(builder.Configuration);
