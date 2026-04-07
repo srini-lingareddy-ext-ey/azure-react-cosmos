@@ -25,6 +25,10 @@ param webAppServiceName string = ''
 @description('Additional app settings for the API (Key Vault references can use @Microsoft.KeyVault(VaultName=...)).')
 param additionalAppSettings object = {}
 
+@description('Redis connection string for ASP.NET Core ConnectionStrings:Redis (maps to ConnectionStrings__Redis app setting).')
+@secure()
+param redisConnectionString string
+
 param allowedOrigins array = []
 
 var abbrs = loadJsonContent('../abbreviations.json')
@@ -103,7 +107,7 @@ resource appService 'Microsoft.Web/sites@2022-09-01' = {
   }
 }
 
-// API app settings (Application Insights + Key Vault + Cosmos + CORS origin for web App Service)
+// API app settings (Application Insights + Key Vault + Cosmos + Redis connection string + CORS origin for web App Service)
 resource appSettingsResource 'Microsoft.Web/sites/config@2022-09-01' = {
   parent: appService
   name: 'appsettings'
@@ -116,6 +120,7 @@ resource appSettingsResource 'Microsoft.Web/sites/config@2022-09-01' = {
       ENABLE_ORYX_BUILD: 'true'
       SCM_DO_BUILD_DURING_DEPLOYMENT: 'false'
       API_ALLOW_ORIGINS: 'https://${webApp.properties.defaultHostName}'
+      ConnectionStrings__Redis: redisConnectionString
     },
     additionalAppSettings
   )

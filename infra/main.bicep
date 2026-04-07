@@ -92,6 +92,20 @@ module cosmos './modules/cosmos-db.bicep' = {
   }
 }
 
+// Azure Cache for Redis — must exist before API App Service so ConnectionStrings__Redis can be set
+module redis './modules/redis.bicep' = {
+  name: 'redis'
+  scope: rg
+  params: {
+    environmentName: environmentName
+    location: location
+    tags: tags
+    sku: redisSku
+    capacity: redisSku == 'Basic' ? 0 : 1
+    redisName: !empty(redisName) ? redisName : ''
+  }
+}
+
 // App Service Plan + Web App (React) + API App Service (CORS / API_ALLOW_ORIGINS use web hostname)
 module appService './modules/app-service.bicep' = {
   name: 'api-appservice'
@@ -105,6 +119,7 @@ module appService './modules/app-service.bicep' = {
     appServicePlanSku: appServicePlanSku
     appServiceName: !empty(appServiceName) ? appServiceName : ''
     webAppServiceName: !empty(webAppServiceName) ? webAppServiceName : ''
+    redisConnectionString: redis.outputs.connectionString
     additionalAppSettings: {
       AZURE_COSMOS_ENDPOINT: cosmos.outputs.endpoint
       AZURE_COSMOS_DATABASE_NAME: cosmos.outputs.databaseName
@@ -120,20 +135,6 @@ module apiCosmosRole './app/cosmos-role-assignment.bicep' = {
   params: {
     cosmosAccountName: cosmos.outputs.accountName
     apiPrincipalId: appService.outputs.principalId
-  }
-}
-
-// Azure Cache for Redis
-module redis './modules/redis.bicep' = {
-  name: 'redis'
-  scope: rg
-  params: {
-    environmentName: environmentName
-    location: location
-    tags: tags
-    sku: redisSku
-    capacity: redisSku == 'Basic' ? 0 : 1
-    redisName: !empty(redisName) ? redisName : ''
   }
 }
 

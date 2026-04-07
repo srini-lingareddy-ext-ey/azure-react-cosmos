@@ -32,8 +32,17 @@ jobs:
       - name: Build
         run: dotnet build src/api/Todo.Api.sln --no-restore -c Release
 
+      # WO-1: FastLocal on PR (fast gate); full suite on push to main and workflow_dispatch
       - name: Run tests
-        run: dotnet test src/api/Todo.Api.sln --no-build -c Release --verbosity normal
+        run: |
+          set -euo pipefail
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            echo "Running FastLocal tests only (Category=FastLocal)"
+            dotnet test src/api/Todo.Api.sln --no-build -c Release --verbosity normal --filter "Category=FastLocal"
+          else
+            echo "Running full test suite"
+            dotnet test src/api/Todo.Api.sln --no-build -c Release --verbosity normal
+          fi
 
   build-frontend:
     name: Build & Test Frontend
@@ -138,3 +147,19 @@ jobs:
           VITE_MSAL_REDIRECT_URI: ${{ vars.VITE_MSAL_REDIRECT_URI }}
           VITE_MSAL_POST_LOGOUT_REDIRECT_URI: ${{ vars.VITE_MSAL_POST_LOGOUT_REDIRECT_URI }}
           VITE_MSAL_API_SCOPES: ${{ vars.VITE_MSAL_API_SCOPES }}
+
+      # WO-2: fail the workflow if the deployed API does not respond on liveness
+      - name: Smoke test — API /health/live
+        run: |
+          set -euo pipefail
+          line=$(azd env get-values | grep -E '^API_BASE_URL=' | head -1 || true)
+          if [ -z "${line}" ]; then
+            echo "::error::API_BASE_URL not found in azd environment (run azd provision and ensure Bicep outputs API_BASE_URL)"
+            azd env get-values || true
+            exit 1
+          fi
+          API_BASE_URL="${line#API_BASE_URL=}"
+          URL="${API_BASE_URL%/}/health/live"
+          echo "GET $URL"
+          curl -fsS -o /dev/null --connect-timeout 30 --max-time 60 "$URL"
+          echo "Smoke test passed (HTTP 2xx)"
