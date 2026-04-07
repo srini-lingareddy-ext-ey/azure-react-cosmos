@@ -29,10 +29,10 @@ services:
       prepackage:
         windows:
           shell: pwsh
-          run: 'echo "VITE_API_BASE_URL=""$env:API_BASE_URL""" > .env.local ; echo "VITE_APPLICATIONINSIGHTS_CONNECTION_STRING=""$env:APPLICATIONINSIGHTS_CONNECTION_STRING""" >> .env.local'
+          run: 'echo "VITE_API_BASE_URL=""$env:API_BASE_URL""" > .env.local ; echo "VITE_APPLICATIONINSIGHTS_CONNECTION_STRING=""$env:APPLICATIONINSIGHTS_CONNECTION_STRING""" >> .env.local ; echo "VITE_MSAL_CLIENT_ID=""a1a93d2b-a191-4290-bf03-f75c2b154671""" >> .env.local ; echo "VITE_MSAL_AUTHORITY=""https://login.microsoftonline.com/adb53b4f-b05f-4dcb-a2e1-9111380568c3/v2.0""" >> .env.local ; echo "VITE_MSAL_API_SCOPES=""api://84775fba-0812-4e8a-8e63-d2eaf8afbbae/access_as_user""" >> .env.local'
         posix:
           shell: sh
-          run: 'echo VITE_API_BASE_URL=\"$API_BASE_URL\" > .env.local && echo VITE_APPLICATIONINSIGHTS_CONNECTION_STRING=\"$APPLICATIONINSIGHTS_CONNECTION_STRING\" >> .env.local'    
+          run: 'echo VITE_API_BASE_URL=\"$API_BASE_URL\" > .env.local && echo VITE_APPLICATIONINSIGHTS_CONNECTION_STRING=\"$APPLICATIONINSIGHTS_CONNECTION_STRING\" >> .env.local && echo VITE_MSAL_CLIENT_ID=\"a1a93d2b-a191-4290-bf03-f75c2b154671\" >> .env.local && echo VITE_MSAL_AUTHORITY=\"https://login.microsoftonline.com/adb53b4f-b05f-4dcb-a2e1-9111380568c3/v2.0\" >> .env.local && echo VITE_MSAL_API_SCOPES=\"api://84775fba-0812-4e8a-8e63-d2eaf8afbbae/access_as_user\" >> .env.local'
       postdeploy:
         windows:
           shell: pwsh

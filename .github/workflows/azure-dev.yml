@@ -129,5 +129,12 @@ jobs:
           AZD_INITIAL_ENVIRONMENT_CONFIG: ${{ secrets.AZD_INITIAL_ENVIRONMENT_CONFIG }}
 
       # Deploys azure.yaml services: web → Web App, api → API App Service (zip deploy).
+      # Set repository variables VITE_MSAL_* so the web prepackage hook can bake MSAL into the Vite build (see docs/auth-msal.md).
       - name: Deploy application (web + api)
         run: azd deploy --no-prompt
+        env:
+          VITE_MSAL_CLIENT_ID: ${{ vars.VITE_MSAL_CLIENT_ID }}
+          VITE_MSAL_AUTHORITY: ${{ vars.VITE_MSAL_AUTHORITY }}
+          VITE_MSAL_REDIRECT_URI: ${{ vars.VITE_MSAL_REDIRECT_URI }}
+          VITE_MSAL_POST_LOGOUT_REDIRECT_URI: ${{ vars.VITE_MSAL_POST_LOGOUT_REDIRECT_URI }}
+          VITE_MSAL_API_SCOPES: ${{ vars.VITE_MSAL_API_SCOPES }}

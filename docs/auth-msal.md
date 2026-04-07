@@ -15,6 +15,14 @@ When **`VITE_MSAL_CLIENT_ID` is unset or empty**:
 
 Use **`VITE_MSAL_CLIENT_ID`** (and API scopes as needed) for environments where real Entra sign-in and API tokens are required.
 
+## Deploying to Azure (azd / CI)
+
+Vite embeds `VITE_*` variables at **build** time. For **`azd deploy`**, set MSAL values in the azd environment so hooks receive them (for example `azd env set VITE_MSAL_CLIENT_ID <spa-client-id>` and optional `VITE_MSAL_API_SCOPES`, …), **or** export the same names in your shell before `azd deploy`. The **`web`** service **`prepackage`** hook in `azure.yaml` writes `API_BASE_URL`, Application Insights, and `VITE_MSAL_*` into a temporary `.env.local` for `npm run build`.
+
+For **GitHub Actions**, set repository **Variables** `VITE_MSAL_CLIENT_ID` (required to enable auth) and any optional `VITE_MSAL_*` names—the deploy job passes them into the build. For **Azure Pipelines**, define the same names as pipeline variables on the deploy task’s `env` block (see `.azdo/pipelines/azure-dev.yml`).
+
+Register your deployed site URL as a **redirect URI** on the Entra SPA registration if you set an explicit `VITE_MSAL_REDIRECT_URI`; otherwise the app defaults to the current origin at runtime.
+
 ## Enabling authentication
 
 Set **`VITE_MSAL_CLIENT_ID`** to your Entra **single-page application** client ID.

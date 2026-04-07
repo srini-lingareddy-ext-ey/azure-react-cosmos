@@ -116,7 +116,7 @@ This template uses [Azure Key Vault](https://docs.microsoft.com/azure/key-vault/
 
 ### Web app: Microsoft Entra (MSAL)
 
-Without **`VITE_MSAL_CLIENT_ID`**, the web app runs in **local development mode only**: no Entra sign-in, **no tokens**, **no `Authorization` headers** on API calls, and the UI shows **AUTH DISABLED** so this is not mistaken for real authentication. Set `VITE_MSAL_CLIENT_ID` (and scopes as needed) for real sign-in.
+Without **`VITE_MSAL_CLIENT_ID`**, the web app runs in **local development mode only**: no Entra sign-in, **no tokens**, **no `Authorization` headers** on API calls, and the UI shows **AUTH DISABLED** so this is not mistaken for real authentication. Set `VITE_MSAL_CLIENT_ID` (and scopes as needed) for real sign-in. For **Azure deployments**, supply those `VITE_MSAL_*` values at **build** time (`azd env set …` before `azd deploy`, or GitHub **Variables** / Azure Pipelines variables—see the **Deploying to Azure** section in [docs/auth-msal.md](docs/auth-msal.md)).
 
 Details: [docs/auth-msal.md](docs/auth-msal.md) · [docs/api-client.md](docs/api-client.md) · `src/web/.env.example`. Server state: [docs/tanstack-query.md](docs/tanstack-query.md).
 
