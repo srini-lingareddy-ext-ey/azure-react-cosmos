@@ -72,6 +72,7 @@ if (!string.IsNullOrEmpty(builder.Configuration["AZURE_COSMOS_ENDPOINT"]))
     builder.Services.AddAppCosmosRepositories(db);
     builder.Services.AddScoped<IAuthService, AuthService>();
     builder.Services.AddScoped<ITenantService, TenantService>();
+    builder.Services.AddScoped<IUserManagementService, UserManagementService>();
 }
 else
 {
@@ -79,6 +80,7 @@ else
     builder.Services.AddScoped<IAuthService, Todo.Api.Infrastructure.Identity.ClaimsOnlyAuthService>();
     // WO-9: tenant CRUD requires Cosmos; stub throws 503 via HttpRequestException when invoked.
     builder.Services.AddScoped<ITenantService, UnavailableTenantService>();
+    builder.Services.AddScoped<IUserManagementService, UnavailableUserManagementService>();
 }
 // AC-FOUNDATION-008: FluentValidation — DI, auto-validation before controllers, 400 envelope with field errors
 builder.Services.AddFluentValidationPipeline();

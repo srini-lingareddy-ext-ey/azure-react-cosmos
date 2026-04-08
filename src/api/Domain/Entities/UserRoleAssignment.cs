@@ -21,6 +21,9 @@ public sealed class UserRoleAssignment : IDomainEntity, IAuditableEntity, IConcu
 
     public UserStatus Status { get; set; } = UserStatus.Active;
 
+    /// <summary>Last successful <c>/auth/me</c> touch for this assignment (WO-10).</summary>
+    public DateTimeOffset? LastLoginAt { get; set; }
+
     public int SchemaVersion { get; set; } = 1;
 
     public DateTimeOffset? CreatedAt { get; set; }

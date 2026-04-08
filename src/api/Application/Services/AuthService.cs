@@ -82,6 +82,11 @@ public sealed class AuthService : IAuthService
         var displayName = FirstNonEmpty(active.Select(a => a.DisplayName)) ?? displayNameFromClaims;
         var email = FirstNonEmpty(active.Select(a => a.Email)) ?? emailFromClaims;
 
+        activeAssignment.LastLoginAt = DateTimeOffset.UtcNow;
+        activeAssignment.UpdatedAt = DateTimeOffset.UtcNow;
+        activeAssignment.UpdatedBy = userId;
+        await _assignmentRepo.UpdateAsync(activeAssignment, cancellationToken).ConfigureAwait(false);
+
         return new UserProfileResponse(
             Id: userId,
             UserId: userId,
