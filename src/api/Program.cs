@@ -20,6 +20,7 @@ using Azure.Identity;
 using Azure.Extensions.AspNetCore.Configuration.Secrets;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
+using Todo.Api.Application.Services;
 using Todo.Api.Infrastructure.Configuration;
 using Todo.Api.Infrastructure.Cors;
 using Todo.Api.Infrastructure.HealthChecks;
@@ -69,12 +70,15 @@ if (!string.IsNullOrEmpty(builder.Configuration["AZURE_COSMOS_ENDPOINT"]))
 {
     var db = builder.Configuration["AZURE_COSMOS_DATABASE_NAME"] ?? "App";
     builder.Services.AddAppCosmosRepositories(db);
-    builder.Services.AddScoped<Todo.Api.Application.Services.IAuthService, Todo.Api.Application.Services.AuthService>();
+    builder.Services.AddScoped<IAuthService, AuthService>();
+    builder.Services.AddScoped<ITenantService, TenantService>();
 }
 else
 {
     // WO-8: GET /api/v1/auth/me without Cosmos returns claims-only profile for local development.
-    builder.Services.AddScoped<Todo.Api.Application.Services.IAuthService, Todo.Api.Infrastructure.Identity.ClaimsOnlyAuthService>();
+    builder.Services.AddScoped<IAuthService, Todo.Api.Infrastructure.Identity.ClaimsOnlyAuthService>();
+    // WO-9: tenant CRUD requires Cosmos; stub throws 503 via HttpRequestException when invoked.
+    builder.Services.AddScoped<ITenantService, UnavailableTenantService>();
 }
 // AC-FOUNDATION-008: FluentValidation — DI, auto-validation before controllers, 400 envelope with field errors
 builder.Services.AddFluentValidationPipeline();

@@ -84,6 +84,10 @@ public sealed class ExceptionHandlingMiddleware
         {
             ConcurrencyConflictException ex => (HttpStatusCode.PreconditionFailed, ErrorCodes.ConcurrencyConflict, ex.Message),
 
+            TenantNameConflictException ex => (HttpStatusCode.Conflict, ErrorCodes.Conflict, ex.Message),
+
+            UnauthorizedAccessException ex => (HttpStatusCode.Forbidden, ErrorCodes.Forbidden, string.IsNullOrEmpty(ex.Message) ? "Access denied." : ex.Message),
+
             KeyNotFoundException ex => (HttpStatusCode.NotFound, ErrorCodes.NotFound, ex.Message),
             ArgumentNullException ex => (HttpStatusCode.BadRequest, ErrorCodes.BadRequest, ex.Message ?? "A required value was missing."),
             ArgumentException ex => (HttpStatusCode.BadRequest, ErrorCodes.BadRequest, string.IsNullOrEmpty(ex.Message) ? "Invalid request." : ex.Message),
