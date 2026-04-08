@@ -6,13 +6,14 @@ using Todo.Api.Api.Authorization;
 using Todo.Api.Application.Services;
 using Todo.Api.Domain.Entities;
 using Todo.Api.Domain.Repositories;
+using Todo.Api.Infrastructure.Identity;
 using Todo.Api.Infrastructure.TenantContext;
 
 namespace Todo.Api.Infrastructure.Middleware;
 
 /// <summary>
-/// For endpoints with <see cref="RequireTenantContextAttribute"/>: requires <c>X-Tenant-Id</c>, active tenant, and active user assignment.
-/// <see cref="ICurrentUserService.UserId"/> must match <see cref="UserRoleAssignment.UserId"/> (use Entra <c>oid</c> when storing assignments).
+/// For endpoints with <see cref="RequireTenantContextAttribute"/>: requires <c>X-Tenant-Id</c>, resolves tenant,
+/// validates access (role assignment or PlatformAdmin bypass), and populates <see cref="ICurrentTenantContext"/>.
 /// </summary>
 public sealed class TenantContextMiddleware : IMiddleware
 {
@@ -25,6 +26,12 @@ public sealed class TenantContextMiddleware : IMiddleware
 
     public async Task InvokeAsync(HttpContext context, RequestDelegate next)
     {
+        if (IsTenantResolutionExemptPath(context.Request.Path))
+        {
+            await next(context).ConfigureAwait(false);
+            return;
+        }
+
         var endpoint = context.GetEndpoint();
         if (endpoint?.Metadata.GetMetadata<RequireTenantContextAttribute>() is null)
         {
@@ -56,8 +63,8 @@ public sealed class TenantContextMiddleware : IMiddleware
         {
             await WriteErrorAsync(
                     context,
-                    StatusCodes.Status400BadRequest,
-                    ErrorCodes.BadRequest,
+                    StatusCodes.Status403Forbidden,
+                    ErrorCodes.TenantAccessDenied,
                     $"Missing required header {TenantContextHttp.TenantIdHeaderName}.")
                 .ConfigureAwait(false);
             return;
@@ -68,8 +75,8 @@ public sealed class TenantContextMiddleware : IMiddleware
         {
             await WriteErrorAsync(
                     context,
-                    StatusCodes.Status400BadRequest,
-                    ErrorCodes.BadRequest,
+                    StatusCodes.Status403Forbidden,
+                    ErrorCodes.TenantAccessDenied,
                     $"{TenantContextHttp.TenantIdHeaderName} must be a non-empty tenant id.")
                 .ConfigureAwait(false);
             return;
@@ -88,14 +95,17 @@ public sealed class TenantContextMiddleware : IMiddleware
             return;
         }
 
+        var isPlatformAdmin = await HasPlatformAdminRoleAnywhereAsync(assignmentRepo, userId, context.RequestAborted)
+            .ConfigureAwait(false);
+
         var tenant = await tenantRepo.GetByIdAsync(tenantId, context.RequestAborted).ConfigureAwait(false);
         if (tenant is null)
         {
             await WriteErrorAsync(
                     context,
-                    StatusCodes.Status404NotFound,
-                    ErrorCodes.NotFound,
-                    "Tenant was not found.")
+                    StatusCodes.Status403Forbidden,
+                    ErrorCodes.TenantAccessDenied,
+                    "Tenant was not found or you do not have access.")
                 .ConfigureAwait(false);
             return;
         }
@@ -105,9 +115,17 @@ public sealed class TenantContextMiddleware : IMiddleware
             await WriteErrorAsync(
                     context,
                     StatusCodes.Status403Forbidden,
-                    ErrorCodes.Forbidden,
+                    ErrorCodes.TenantInactive,
                     "This tenant is not active.")
                 .ConfigureAwait(false);
+            return;
+        }
+
+        if (isPlatformAdmin)
+        {
+            context.RequestServices.GetRequiredService<TenantContextService>()
+                .Set(tenant.Id, tenant.Name, tenant.Status, UserRole.PlatformAdmin, UserStatus.Active);
+            await next(context).ConfigureAwait(false);
             return;
         }
 
@@ -119,7 +137,7 @@ public sealed class TenantContextMiddleware : IMiddleware
             await WriteErrorAsync(
                     context,
                     StatusCodes.Status403Forbidden,
-                    ErrorCodes.Forbidden,
+                    ErrorCodes.TenantAccessDenied,
                     "You do not have access to this tenant.")
                 .ConfigureAwait(false);
             return;
@@ -130,16 +148,51 @@ public sealed class TenantContextMiddleware : IMiddleware
             await WriteErrorAsync(
                     context,
                     StatusCodes.Status403Forbidden,
-                    ErrorCodes.Forbidden,
+                    ErrorCodes.TenantAccessDenied,
                     "Your access to this tenant is inactive.")
                 .ConfigureAwait(false);
             return;
         }
 
-        context.RequestServices.GetRequiredService<CurrentTenantContext>()
-            .Set(tenantId, assignment.Role, assignment.Status);
+        context.RequestServices.GetRequiredService<TenantContextService>()
+            .Set(tenant.Id, tenant.Name, tenant.Status, assignment.Role, assignment.Status);
 
         await next(context).ConfigureAwait(false);
+    }
+
+    private static async Task<bool> HasPlatformAdminRoleAnywhereAsync(
+        IUserRoleAssignmentRepository assignmentRepo,
+        string userId,
+        CancellationToken cancellationToken)
+    {
+        await foreach (var a in assignmentRepo.GetAllByUserAsync(userId, cancellationToken).ConfigureAwait(false))
+        {
+            if (a.Role == UserRole.PlatformAdmin)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    /// Paths that must not require tenant resolution (WO-7).
+    /// </summary>
+    private static bool IsTenantResolutionExemptPath(PathString path)
+    {
+        var p = path.Value ?? string.Empty;
+        if (string.Equals(p, "/api/v1/auth/me", StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
+        if (p.StartsWith("/health", StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
+        return false;
     }
 
     private static Task WriteErrorAsync(HttpContext context, int statusCode, string errorCode, string message)

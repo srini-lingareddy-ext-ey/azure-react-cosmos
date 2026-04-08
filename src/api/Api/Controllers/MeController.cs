@@ -19,7 +19,10 @@ public sealed class MeController : ControllerBase
         if (!tenantContext.IsSet)
             return StatusCode(StatusCodes.Status500InternalServerError);
 
-        return Ok(new TenantContextResponse(tenantContext.TenantId, tenantContext.Role.ToString(), tenantContext.Status.ToString()));
+        return Ok(new TenantContextResponse(
+            tenantContext.TenantId,
+            tenantContext.Role.ToString(),
+            tenantContext.AssignmentStatus.ToString()));
     }
 }
 

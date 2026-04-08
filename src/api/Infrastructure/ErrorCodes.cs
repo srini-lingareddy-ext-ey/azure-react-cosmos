@@ -9,6 +9,12 @@ public static class ErrorCodes
     public const string Unauthorized = "UNAUTHORIZED";
     public const string Forbidden = "FORBIDDEN";
 
+    /// <summary>Missing, invalid, or unauthorized tenant context (WO-7).</summary>
+    public const string TenantAccessDenied = "TENANT_ACCESS_DENIED";
+
+    /// <summary>Resolved tenant exists but is not active (WO-7).</summary>
+    public const string TenantInactive = "TENANT_INACTIVE";
+
     // Client errors
     public const string BadRequest = "BAD_REQUEST";
     /// <summary>Transport/input validation failed (FluentValidation, HTTP 400).</summary>

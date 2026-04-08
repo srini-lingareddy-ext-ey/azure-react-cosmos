@@ -17,7 +17,7 @@ using Xunit;
 
 namespace Todo.Api.Tests.Integration;
 
-/// <summary>WO-6: X-Tenant-Id, tenant/assignment checks, and tenant context on /api/v1/me/tenant-context.</summary>
+/// <summary>WO-6 / WO-7: X-Tenant-Id, tenant/assignment checks, error codes, PlatformAdmin bypass.</summary>
 [Trait(TestTraits.Category, TestTraits.FullCI)]
 public sealed class TenantContextMiddlewareTests
 {
@@ -59,7 +59,6 @@ public sealed class TenantContextMiddlewareTests
                     o.RequireHttpsMetadata = false;
                     o.MetadataAddress = null!;
                     o.ConfigurationManager = null!;
-                    // Keep short claim names so ICurrentUserService finds "oid" (same as typical Entra v2 tokens).
                     o.MapInboundClaims = false;
                     o.TokenValidationParameters = new TokenValidationParameters
                     {
@@ -90,8 +89,34 @@ public sealed class TenantContextMiddlewareTests
         return client;
     }
 
+    private static async IAsyncEnumerable<UserRoleAssignment> YieldAssignmentsAsync(
+        params UserRoleAssignment[] items)
+    {
+        foreach (var i in items)
+        {
+            yield return i;
+        }
+
+        await Task.CompletedTask.ConfigureAwait(false);
+    }
+
     [Fact]
-    public async Task TenantContext_MissingHeader_Returns400()
+    public async Task AuthMe_WithoutTenantHeader_Returns200()
+    {
+        var tenantRepo = new Mock<ITenantRepository>();
+        var assignmentRepo = new Mock<IUserRoleAssignmentRepository>();
+        using var factory = CreateFactory(assignmentRepo.Object, tenantRepo.Object);
+        using var client = CreateAuthenticatedClient(factory);
+
+        var response = await client.GetAsync("/api/v1/auth/me");
+
+        response.EnsureSuccessStatusCode();
+        var body = await response.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Equal(UserOid, body.GetProperty("id").GetString());
+    }
+
+    [Fact]
+    public async Task TenantContext_MissingHeader_Returns403_TenantAccessDenied()
     {
         var tenantRepo = new Mock<ITenantRepository>();
         var assignmentRepo = new Mock<IUserRoleAssignmentRepository>();
@@ -100,14 +125,16 @@ public sealed class TenantContextMiddlewareTests
 
         var response = await client.GetAsync("/api/v1/me/tenant-context");
 
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+        var doc = await response.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Equal("TENANT_ACCESS_DENIED", doc.GetProperty("errorCode").GetString());
         tenantRepo.Verify(
             r => r.GetByIdAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()),
             Times.Never);
     }
 
     [Fact]
-    public async Task TenantContext_NoAssignment_Returns403()
+    public async Task TenantContext_NoAssignment_Returns403_TenantAccessDenied()
     {
         var tenantRepo = new Mock<ITenantRepository>();
         tenantRepo
@@ -118,6 +145,9 @@ public sealed class TenantContextMiddlewareTests
         assignmentRepo
             .Setup(r => r.GetByUserAndTenantAsync(UserOid, TenantId, It.IsAny<CancellationToken>()))
             .ReturnsAsync((UserRoleAssignment?)null);
+        assignmentRepo
+            .Setup(r => r.GetAllByUserAsync(UserOid, It.IsAny<CancellationToken>()))
+            .Returns(YieldAssignmentsAsync());
 
         using var factory = CreateFactory(assignmentRepo.Object, tenantRepo.Object);
         using var client = CreateAuthenticatedClient(factory);
@@ -126,10 +156,12 @@ public sealed class TenantContextMiddlewareTests
         var response = await client.GetAsync("/api/v1/me/tenant-context");
 
         Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+        var doc = await response.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Equal("TENANT_ACCESS_DENIED", doc.GetProperty("errorCode").GetString());
     }
 
     [Fact]
-    public async Task TenantContext_InactiveAssignment_Returns403()
+    public async Task TenantContext_InactiveAssignment_Returns403_TenantAccessDenied()
     {
         var tenantRepo = new Mock<ITenantRepository>();
         tenantRepo
@@ -147,6 +179,9 @@ public sealed class TenantContextMiddlewareTests
                 Role = UserRole.Viewer,
                 Status = UserStatus.Inactive,
             });
+        assignmentRepo
+            .Setup(r => r.GetAllByUserAsync(UserOid, It.IsAny<CancellationToken>()))
+            .Returns(YieldAssignmentsAsync());
 
         using var factory = CreateFactory(assignmentRepo.Object, tenantRepo.Object);
         using var client = CreateAuthenticatedClient(factory);
@@ -155,10 +190,12 @@ public sealed class TenantContextMiddlewareTests
         var response = await client.GetAsync("/api/v1/me/tenant-context");
 
         Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+        var doc = await response.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Equal("TENANT_ACCESS_DENIED", doc.GetProperty("errorCode").GetString());
     }
 
     [Fact]
-    public async Task TenantContext_InactiveTenant_Returns403()
+    public async Task TenantContext_InactiveTenant_Returns403_TenantInactive()
     {
         var tenantRepo = new Mock<ITenantRepository>();
         tenantRepo
@@ -166,6 +203,9 @@ public sealed class TenantContextMiddlewareTests
             .ReturnsAsync(new Tenant { Id = TenantId, Name = "t", DisplayName = "T", Status = TenantStatus.Inactive });
 
         var assignmentRepo = new Mock<IUserRoleAssignmentRepository>();
+        assignmentRepo
+            .Setup(r => r.GetAllByUserAsync(UserOid, It.IsAny<CancellationToken>()))
+            .Returns(YieldAssignmentsAsync());
 
         using var factory = CreateFactory(assignmentRepo.Object, tenantRepo.Object);
         using var client = CreateAuthenticatedClient(factory);
@@ -174,13 +214,15 @@ public sealed class TenantContextMiddlewareTests
         var response = await client.GetAsync("/api/v1/me/tenant-context");
 
         Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+        var doc = await response.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Equal("TENANT_INACTIVE", doc.GetProperty("errorCode").GetString());
         assignmentRepo.Verify(
             r => r.GetByUserAndTenantAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()),
             Times.Never);
     }
 
     [Fact]
-    public async Task TenantContext_TenantNotFound_Returns404()
+    public async Task TenantContext_TenantNotFound_Returns403_TenantAccessDenied()
     {
         var tenantRepo = new Mock<ITenantRepository>();
         tenantRepo
@@ -188,6 +230,9 @@ public sealed class TenantContextMiddlewareTests
             .ReturnsAsync((Tenant?)null);
 
         var assignmentRepo = new Mock<IUserRoleAssignmentRepository>();
+        assignmentRepo
+            .Setup(r => r.GetAllByUserAsync(UserOid, It.IsAny<CancellationToken>()))
+            .Returns(YieldAssignmentsAsync());
 
         using var factory = CreateFactory(assignmentRepo.Object, tenantRepo.Object);
         using var client = CreateAuthenticatedClient(factory);
@@ -195,9 +240,50 @@ public sealed class TenantContextMiddlewareTests
 
         var response = await client.GetAsync("/api/v1/me/tenant-context");
 
-        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+        var doc = await response.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Equal("TENANT_ACCESS_DENIED", doc.GetProperty("errorCode").GetString());
         assignmentRepo.Verify(
             r => r.GetByUserAndTenantAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    [Fact]
+    public async Task TenantContext_PlatformAdmin_WithoutAssignmentForTenant_Returns200_WithPlatformAdminRole()
+    {
+        const string otherTenant = "tenant-other";
+        var tenantRepo = new Mock<ITenantRepository>();
+        tenantRepo
+            .Setup(r => r.GetByIdAsync(TenantId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new Tenant { Id = TenantId, Name = "t", DisplayName = "T", Status = TenantStatus.Active });
+
+        var assignmentRepo = new Mock<IUserRoleAssignmentRepository>();
+        assignmentRepo
+            .Setup(r => r.GetByUserAndTenantAsync(UserOid, TenantId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync((UserRoleAssignment?)null);
+        assignmentRepo
+            .Setup(r => r.GetAllByUserAsync(UserOid, It.IsAny<CancellationToken>()))
+            .Returns(YieldAssignmentsAsync(new UserRoleAssignment
+            {
+                Id = "pa1",
+                TenantId = otherTenant,
+                UserId = UserOid,
+                Role = UserRole.PlatformAdmin,
+                Status = UserStatus.Active,
+            }));
+
+        using var factory = CreateFactory(assignmentRepo.Object, tenantRepo.Object);
+        using var client = CreateAuthenticatedClient(factory);
+        client.DefaultRequestHeaders.Add("X-Tenant-Id", TenantId);
+
+        var response = await client.GetAsync("/api/v1/me/tenant-context");
+
+        response.EnsureSuccessStatusCode();
+        var body = await response.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Equal(TenantId, body.GetProperty("tenantId").GetString());
+        Assert.Equal("PlatformAdmin", body.GetProperty("role").GetString());
+        assignmentRepo.Verify(
+            r => r.GetByUserAndTenantAsync(UserOid, TenantId, It.IsAny<CancellationToken>()),
             Times.Never);
     }
 
@@ -220,6 +306,9 @@ public sealed class TenantContextMiddlewareTests
                 Role = UserRole.Operator,
                 Status = UserStatus.Active,
             });
+        assignmentRepo
+            .Setup(r => r.GetAllByUserAsync(UserOid, It.IsAny<CancellationToken>()))
+            .Returns(YieldAssignmentsAsync());
 
         using var factory = CreateFactory(assignmentRepo.Object, tenantRepo.Object);
         using var client = CreateAuthenticatedClient(factory);
