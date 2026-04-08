@@ -15,6 +15,9 @@ public static class ErrorCodes
     /// <summary>Resolved tenant exists but is not active (WO-7).</summary>
     public const string TenantInactive = "TENANT_INACTIVE";
 
+    /// <summary>Authenticated user has no tenant role assignments (WO-8).</summary>
+    public const string UserNotProvisioned = "USER_NOT_PROVISIONED";
+
     // Client errors
     public const string BadRequest = "BAD_REQUEST";
     /// <summary>Transport/input validation failed (FluentValidation, HTTP 400).</summary>

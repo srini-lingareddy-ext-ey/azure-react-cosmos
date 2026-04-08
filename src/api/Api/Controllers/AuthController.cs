@@ -1,37 +1,65 @@
-using System.Text.Json.Serialization;
+using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Todo.Api.Application.Services;
+using Todo.Api.Application.Transport;
+using Todo.Api.Infrastructure;
+using Todo.Api.Infrastructure.TenantContext;
 
 namespace Todo.Api.Api.Controllers;
 
-/// <summary>
-/// Authentication identity for the caller (WO-7 bypass path; expanded in WO-8).
-/// </summary>
+/// <summary>WO-7 / WO-8: authenticated identity (<c>GET /api/v1/auth/me</c>).</summary>
 [ApiController]
 [Route("api/v1/auth")]
 [Authorize]
 public sealed class AuthController : ControllerBase
 {
-    /// <summary>Returns the authenticated user id. Does not require <c>X-Tenant-Id</c>.</summary>
-    [HttpGet("me")]
-    public ActionResult<AuthMeResponse> GetMe([FromServices] ICurrentUserService users)
+    private readonly IAuthService _authService;
+
+    public AuthController(IAuthService authService)
     {
-        var id = users.UserId ?? string.Empty;
-        return Ok(new AuthMeResponse(
-            Id: id,
-            DisplayName: null,
-            Email: null,
-            Tenants: Array.Empty<AuthMeTenantRefDto>()));
+        _authService = authService;
+    }
+
+    /// <summary>Returns profile and tenant memberships. Does not require <c>X-Tenant-Id</c>; optional header selects <see cref="UserProfileResponse.ActiveTenant"/>.</summary>
+    [HttpGet("me")]
+    public async Task<ActionResult<UserProfileResponse>> GetMe(
+        [FromServices] ICurrentUserService users,
+        CancellationToken cancellationToken)
+    {
+        var userId = users.UserId;
+        if (string.IsNullOrEmpty(userId))
+        {
+            return Unauthorized();
+        }
+
+        var preferredTenant = Request.Headers[TenantContextHttp.TenantIdHeaderName].ToString();
+        if (string.IsNullOrWhiteSpace(preferredTenant))
+        {
+            preferredTenant = null;
+        }
+
+        var displayName = User.FindFirstValue("name")
+            ?? User.FindFirstValue("given_name")
+            ?? User.FindFirstValue("preferred_username");
+        var email = User.FindFirstValue(ClaimTypes.Email)
+            ?? User.FindFirstValue("emails")
+            ?? User.FindFirstValue("email");
+
+        var profile = await _authService
+            .GetCurrentUserProfileAsync(userId, preferredTenant, displayName, email, cancellationToken)
+            .ConfigureAwait(false);
+
+        if (profile is null)
+        {
+            return StatusCode(
+                StatusCodes.Status403Forbidden,
+                new ApiErrorEnvelope(
+                    HttpContext.TraceIdentifier,
+                    ErrorCodes.UserNotProvisioned,
+                    "The authenticated user has no active tenant role assignments."));
+        }
+
+        return Ok(profile);
     }
 }
-
-public sealed record AuthMeResponse(
-    [property: JsonPropertyName("id")] string Id,
-    [property: JsonPropertyName("displayName")] string? DisplayName,
-    [property: JsonPropertyName("email")] string? Email,
-    [property: JsonPropertyName("tenants")] IReadOnlyList<AuthMeTenantRefDto> Tenants);
-
-public sealed record AuthMeTenantRefDto(
-    [property: JsonPropertyName("tenantId")] string TenantId,
-    [property: JsonPropertyName("name")] string? Name);

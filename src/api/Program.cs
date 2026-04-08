@@ -69,6 +69,12 @@ if (!string.IsNullOrEmpty(builder.Configuration["AZURE_COSMOS_ENDPOINT"]))
 {
     var db = builder.Configuration["AZURE_COSMOS_DATABASE_NAME"] ?? "App";
     builder.Services.AddAppCosmosRepositories(db);
+    builder.Services.AddScoped<Todo.Api.Application.Services.IAuthService, Todo.Api.Application.Services.AuthService>();
+}
+else
+{
+    // WO-8: GET /api/v1/auth/me without Cosmos returns claims-only profile for local development.
+    builder.Services.AddScoped<Todo.Api.Application.Services.IAuthService, Todo.Api.Infrastructure.Identity.ClaimsOnlyAuthService>();
 }
 // AC-FOUNDATION-008: FluentValidation — DI, auto-validation before controllers, 400 envelope with field errors
 builder.Services.AddFluentValidationPipeline();
