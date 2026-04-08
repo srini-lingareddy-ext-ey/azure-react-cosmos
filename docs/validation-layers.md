@@ -13,7 +13,7 @@ Validation is split across three layers. Each layer owns specific failures and H
 **This codebase**
 
 - **FluentValidation (transport only)** — `AbstractValidator` types registered via `ValidationAssemblyMarker` must target **inbound request models** under `Application.Transport` (subclass `TransportValidatorBase<T>`). Failures → `VALIDATION_FAILED` + `ApiValidationErrorEnvelope.errors`.
-- **Other application checks** — e.g. `ItemValidator` validates domain `Item` for services/tests; it is **not** part of the FluentValidation MVC pipeline. Never register FluentValidation validators for domain entities on this scan.
+- **Other application checks** — domain validation in services or manual validators outside the HTTP pipeline; it is **not** part of the FluentValidation MVC pipeline. Never register FluentValidation validators for domain entities on this scan.
 - **Domain** — entity methods throw or return errors for business rules; map to 422/409 in services or exception middleware.
 - **Infrastructure** — Cosmos / DB errors mapped to 409/412 as appropriate.
 

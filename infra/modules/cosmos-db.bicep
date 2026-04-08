@@ -76,6 +76,18 @@ resource container 'Microsoft.DocumentDB/databaseAccounts/sqlDatabases/container
   }
 }
 
+// WO-4: tenant configuration container (partition /id)
+resource tenantContainer 'Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers@2024-05-15' = {
+  parent: sqlDatabase
+  name: 'tenant'
+  properties: {
+    resource: {
+      id: 'tenant'
+      partitionKey: { paths: ['/id'], kind: 'Hash' }
+    }
+  }
+}
+
 // Cosmos DB Built-in Data Contributor role for the API principal
 resource roleAssignment 'Microsoft.DocumentDB/databaseAccounts/sqlRoleAssignments@2024-05-15' = if (!empty(principalId)) {
   parent: cosmosAccount

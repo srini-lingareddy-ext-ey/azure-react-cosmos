@@ -21,7 +21,9 @@ using Azure.Extensions.AspNetCore.Configuration.Secrets;
 using Todo.Api.Domain.Entities;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
+using Todo.Api.Domain.Repositories;
 using Todo.Api.Infrastructure.Configuration;
+using Todo.Api.Infrastructure.Data;
 using Todo.Api.Infrastructure.Cors;
 using Todo.Api.Infrastructure.HealthChecks;
 using Todo.Api.Infrastructure.RateLimiting;
@@ -44,7 +46,7 @@ if (!builder.Environment.IsDevelopment())
     }
 }
 
-// Application services: register domain use cases here as they are introduced (demo ItemService removed in WO-3).
+// Application services: register domain use cases here as they are introduced.
 
 // AC-FOUNDATION-003: JWT bearer authentication with Microsoft Entra ID; 401/403 standardized responses; Admin role policy
 builder.Services.AddJwtAuthentication(builder.Configuration);
@@ -62,12 +64,13 @@ builder.Services.AddHttpResilience(builder.Configuration);
 
 // Cosmos DB client (session consistency, RU monitoring) and repository pattern — see Domain/Repositories/IRepository.cs
 builder.Services.AddCosmosDbClient(builder.Configuration);
-// AC-FOUNDATION-002.7: at least one repository registered and injectable when Cosmos is configured
+// WO-4: Tenant repository (container tenant, partition /id); AC-FOUNDATION-002.7 end-to-end registration when Cosmos is configured
 if (!string.IsNullOrEmpty(builder.Configuration["AZURE_COSMOS_ENDPOINT"]))
 {
     var db = builder.Configuration["AZURE_COSMOS_DATABASE_NAME"] ?? "App";
-    var container = builder.Configuration["AZURE_COSMOS_CONTAINER_NAME"] ?? "Items";
-    builder.Services.AddCosmosDbRepository<Item>(db, container, partitionKeyPath: "/id");
+    const string tenantContainerId = "tenant";
+    builder.Services.AddCosmosDbRepository<Tenant>(db, tenantContainerId, partitionKeyPath: "/id");
+    builder.Services.AddSingleton<ITenantRepository, TenantRepository>();
 }
 // AC-FOUNDATION-008: FluentValidation — DI, auto-validation before controllers, 400 envelope with field errors
 builder.Services.AddFluentValidationPipeline();

@@ -24,7 +24,7 @@ dotnet test --filter "Category=FullCI"
 
 ## Structure
 
-- **Builders** — test data builders (e.g. `ItemBuilder`) for reusable fixtures
+- **Builders** — test data builders (e.g. `TenantBuilder`) for reusable fixtures
 - **Domain** — unit tests for domain entities
 - **Application** — unit tests for services (with Moq) and validators
 - **Integration** — WebApplicationFactory-based HTTP tests
