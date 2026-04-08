@@ -39,3 +39,33 @@ paths:
           description: All dependencies healthy
         503:
           description: One or more dependencies unhealthy
+  /api/v1/me/tenant-context:
+    get:
+      operationId: GetMeTenantContext
+      summary: Current user tenant context (WO-6)
+      description: Requires Bearer JWT and X-Tenant-Id; validates tenant and user role assignment.
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: header
+          name: X-Tenant-Id
+          required: true
+          schema:
+            type: string
+      responses:
+        200:
+          description: Resolved tenant id, role, and assignment status
+        400:
+          description: Missing or empty X-Tenant-Id
+        403:
+          description: No access to tenant or inactive tenant/assignment
+        404:
+          description: Tenant not found
+        503:
+          description: Cosmos repositories not configured
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT

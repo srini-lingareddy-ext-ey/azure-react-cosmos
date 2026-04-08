@@ -18,12 +18,12 @@
 
 using Azure.Identity;
 using Azure.Extensions.AspNetCore.Configuration.Secrets;
-using Todo.Api.Domain.Entities;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Todo.Api.Infrastructure.Configuration;
 using Todo.Api.Infrastructure.Cors;
 using Todo.Api.Infrastructure.HealthChecks;
+using Todo.Api.Infrastructure.Middleware;
 using Todo.Api.Infrastructure.RateLimiting;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -50,6 +50,8 @@ if (!builder.Environment.IsDevelopment())
 builder.Services.AddJwtAuthentication(builder.Configuration);
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<Todo.Api.Application.Services.ICurrentUserService, Todo.Api.Infrastructure.Identity.CurrentUserService>();
+// WO-6: X-Tenant-Id + assignment validation for endpoints marked [RequireTenantContext]
+builder.Services.AddTenantContext();
 
 // AC-FOUNDATION-010.1–010.4, 010.7: IDistributedCache (in-memory in Development, Redis in staging/prod) with 2s timeout and graceful degradation
 builder.Services.AddDistributedCache(builder.Configuration, builder.Environment);
@@ -86,11 +88,16 @@ CorsPolicySettings.Resolve(app.Configuration, app.Environment)
 // AC-FOUNDATION-007: Global exception handling — standardized error envelope (traceId, errorCode, message)
 app.UseGlobalExceptionHandling();
 
+// Required so endpoint metadata (e.g. [RequireTenantContext]) is available to middleware (WO-6).
+app.UseRouting();
+
 app.UseCors();
 
 // AC-FOUNDATION-003: Authentication and authorization middleware (JWT validation, role checks)
 app.UseAuthentication();
 app.UseAuthorization();
+
+app.UseMiddleware<TenantContextMiddleware>();
 
 app.UseMiddleware<DistributedRateLimitingMiddleware>();
 

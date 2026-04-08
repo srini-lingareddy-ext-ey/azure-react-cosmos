@@ -47,6 +47,9 @@ public static class AuthenticationServiceCollectionExtensions
                     ClockSkew = TimeSpan.FromMinutes(2),
                 };
 
+                // Preserve short JWT claim names (e.g. oid, sub) so ICurrentUserService and WO-6 assignment UserId stay aligned with Entra v2 tokens.
+                options.MapInboundClaims = false;
+
                 options.Events = new JwtBearerEvents
                 {
                     OnChallenge = context =>
