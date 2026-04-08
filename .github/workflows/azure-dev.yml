@@ -159,6 +159,8 @@ jobs:
             exit 1
           fi
           API_BASE_URL="${line#API_BASE_URL=}"
+          # azd env get-values may quote values; strip so curl gets one valid URL (not "https://host"/path).
+          API_BASE_URL=$(printf '%s' "$API_BASE_URL" | sed 's/^"//;s/"$//')
           URL="${API_BASE_URL%/}/health/live"
           echo "GET $URL"
           curl -fsS -o /dev/null --connect-timeout 30 --max-time 60 "$URL"
