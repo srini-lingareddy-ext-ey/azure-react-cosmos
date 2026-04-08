@@ -21,9 +21,7 @@ using Azure.Extensions.AspNetCore.Configuration.Secrets;
 using Todo.Api.Domain.Entities;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
-using Todo.Api.Domain.Repositories;
 using Todo.Api.Infrastructure.Configuration;
-using Todo.Api.Infrastructure.Data;
 using Todo.Api.Infrastructure.Cors;
 using Todo.Api.Infrastructure.HealthChecks;
 using Todo.Api.Infrastructure.RateLimiting;
@@ -64,13 +62,11 @@ builder.Services.AddHttpResilience(builder.Configuration);
 
 // Cosmos DB client (session consistency, RU monitoring) and repository pattern — see Domain/Repositories/IRepository.cs
 builder.Services.AddCosmosDbClient(builder.Configuration);
-// WO-4: Tenant repository (container tenant, partition /id); AC-FOUNDATION-002.7 end-to-end registration when Cosmos is configured
+// WO-4 / WO-5: Cosmos repositories when configured; AC-FOUNDATION-002.7 end-to-end registration
 if (!string.IsNullOrEmpty(builder.Configuration["AZURE_COSMOS_ENDPOINT"]))
 {
     var db = builder.Configuration["AZURE_COSMOS_DATABASE_NAME"] ?? "App";
-    const string tenantContainerId = "tenant";
-    builder.Services.AddCosmosDbRepository<Tenant>(db, tenantContainerId, partitionKeyPath: "/id");
-    builder.Services.AddSingleton<ITenantRepository, TenantRepository>();
+    builder.Services.AddAppCosmosRepositories(db);
 }
 // AC-FOUNDATION-008: FluentValidation — DI, auto-validation before controllers, 400 envelope with field errors
 builder.Services.AddFluentValidationPipeline();

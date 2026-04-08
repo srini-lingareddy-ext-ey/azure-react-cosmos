@@ -88,6 +88,18 @@ resource tenantContainer 'Microsoft.DocumentDB/databaseAccounts/sqlDatabases/con
   }
 }
 
+// WO-5: user role assignments per tenant (partition /tenantId)
+resource userRoleAssignmentContainer 'Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers@2024-05-15' = {
+  parent: sqlDatabase
+  name: 'user-role-assignment'
+  properties: {
+    resource: {
+      id: 'user-role-assignment'
+      partitionKey: { paths: ['/tenantId'], kind: 'Hash' }
+    }
+  }
+}
+
 // Cosmos DB Built-in Data Contributor role for the API principal
 resource roleAssignment 'Microsoft.DocumentDB/databaseAccounts/sqlRoleAssignments@2024-05-15' = if (!empty(principalId)) {
   parent: cosmosAccount

@@ -4,6 +4,7 @@ using Microsoft.Azure.Cosmos;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Todo.Api.Domain.Entities;
 using Todo.Api.Domain.Repositories;
 using Todo.Api.Infrastructure.Data;
 
@@ -59,6 +60,20 @@ public static class CosmosServiceCollectionExtensions
             var httpContextAccessor = sp.GetService<IHttpContextAccessor>();
             return new CosmosDbRepositoryBase<T>(client, databaseId, containerId, partitionKeyPath, logger, httpContextAccessor);
         });
+        return services;
+    }
+
+    /// <summary>
+    /// WO-4 / WO-5: registers <see cref="IRepository{Tenant}"/>, <see cref="ITenantRepository"/>,
+    /// <see cref="IRepository{UserRoleAssignment}"/>, and <see cref="IUserRoleAssignmentRepository"/> for the given database.
+    /// </summary>
+    public static IServiceCollection AddAppCosmosRepositories(this IServiceCollection services, string databaseId)
+    {
+        services.AddCosmosDbRepository<Tenant>(databaseId, "tenant", "/id");
+        services.AddSingleton<ITenantRepository, TenantRepository>();
+
+        services.AddCosmosDbRepository<UserRoleAssignment>(databaseId, "user-role-assignment", "/tenantId");
+        services.AddSingleton<IUserRoleAssignmentRepository, UserRoleAssignmentRepository>();
         return services;
     }
 }
