@@ -6,15 +6,14 @@ import {
 import config from '../config';
 
 /**
- * MSAL browser configuration from env (VITE_MSAL_*).
+ * MSAL browser configuration from env (VITE_ENTRA_* / VITE_MSAL_* via config).
  * Call only when config.auth.isEnabled.
  */
 export function buildMsalConfiguration(): Configuration {
   const origin =
     typeof window !== 'undefined' ? window.location.origin : '';
   const redirectUri = config.auth.redirectUri || origin;
-  const postLogout =
-    config.auth.postLogoutRedirectUri || origin;
+  const postLogout = config.auth.postLogoutRedirectUri || origin;
 
   return {
     auth: {
@@ -37,16 +36,6 @@ export function buildMsalConfiguration(): Configuration {
 
 export function createMsalInstance(): PublicClientApplication {
   return new PublicClientApplication(buildMsalConfiguration());
-}
-
-let msalSingleton: PublicClientApplication | null = null;
-
-/** Single PCA per page load (avoids duplicate clients under React StrictMode). */
-export function getOrCreateMsalInstance(): PublicClientApplication {
-  if (!msalSingleton) {
-    msalSingleton = createMsalInstance();
-  }
-  return msalSingleton;
 }
 
 /** Scopes requested at login (API + OIDC). */

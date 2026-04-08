@@ -5,13 +5,12 @@ import { DarkTheme } from '../../styles/theme';
 import Telemetry from '../../components/shared/Telemetry';
 import config from '../../config';
 import MsalAppProvider from '../../auth/MsalAppProvider';
-import AuthTokenBridge from '../../auth/AuthTokenBridge';
+import { AuthContextProvider } from '../../auth/AuthContext';
 import AppQueryProvider from '../../query/AppQueryProvider';
 
 const AppProviders: FC<PropsWithChildren<unknown>> = ({ children }) => {
   const routerTree = (
     <BrowserRouter>
-      {config.auth.isEnabled ? <AuthTokenBridge /> : null}
       <Telemetry>{children}</Telemetry>
     </BrowserRouter>
   );
@@ -20,9 +19,11 @@ const AppProviders: FC<PropsWithChildren<unknown>> = ({ children }) => {
     <ThemeProvider applyTo="body" theme={DarkTheme}>
       <AppQueryProvider>
         {config.auth.isEnabled ? (
-          <MsalAppProvider>{routerTree}</MsalAppProvider>
+          <MsalAppProvider>
+            <AuthContextProvider>{routerTree}</AuthContextProvider>
+          </MsalAppProvider>
         ) : (
-          routerTree
+          <AuthContextProvider>{routerTree}</AuthContextProvider>
         )}
       </AppQueryProvider>
     </ThemeProvider>

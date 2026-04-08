@@ -1,5 +1,15 @@
 /// <reference types="vite/client" />
 
+import {
+  getApiBaseUrl,
+  getApplicationInsightsConnectionString,
+  getEntraAuthority,
+  getEntraClientId,
+  getMsalPostLogoutRedirectUri,
+  getMsalRedirectUri,
+  parseApiScopes,
+} from './env';
+
 export interface ApiConfig {
   baseUrl: string;
 }
@@ -16,7 +26,7 @@ export interface AuthConfig {
   authority: string;
   redirectUri: string;
   postLogoutRedirectUri: string;
-  /** Scopes for the backend API (e.g. api://{api-app-id}/access_as_user). Comma-separated in env. */
+  /** Scopes for the backend API (e.g. api://{api-app-id}/access_as_user). */
   apiScopes: string[];
 }
 
@@ -26,35 +36,22 @@ export interface AppConfig {
   auth: AuthConfig;
 }
 
-function parseApiScopes(raw: string | undefined): string[] {
-  if (!raw?.trim()) return [];
-  return raw
-    .split(',')
-    .map((s) => s.trim())
-    .filter(Boolean);
-}
-
-const clientId = (import.meta.env.VITE_MSAL_CLIENT_ID ?? '').trim();
+const clientId = getEntraClientId();
 
 const config: AppConfig = {
   api: {
-    baseUrl: import.meta.env.VITE_API_BASE_URL || 'http://localhost:3100',
+    baseUrl: getApiBaseUrl(),
   },
   observability: {
-    connectionString:
-      import.meta.env.VITE_APPLICATIONINSIGHTS_CONNECTION_STRING || '',
+    connectionString: getApplicationInsightsConnectionString(),
   },
   auth: {
     isEnabled: Boolean(clientId),
     clientId,
-    authority:
-      (import.meta.env.VITE_MSAL_AUTHORITY ?? '').trim() ||
-      'https://login.microsoftonline.com/common',
-    redirectUri: (import.meta.env.VITE_MSAL_REDIRECT_URI ?? '').trim(),
-    postLogoutRedirectUri: (
-      import.meta.env.VITE_MSAL_POST_LOGOUT_REDIRECT_URI ?? ''
-    ).trim(),
-    apiScopes: parseApiScopes(import.meta.env.VITE_MSAL_API_SCOPES),
+    authority: getEntraAuthority(),
+    redirectUri: getMsalRedirectUri(),
+    postLogoutRedirectUri: getMsalPostLogoutRedirectUri(),
+    apiScopes: parseApiScopes(),
   },
 };
 

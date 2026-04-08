@@ -1,14 +1,14 @@
 import { FC, PropsWithChildren, useEffect, useState } from 'react';
 import { MsalProvider } from '@azure/msal-react';
 import { Spinner, Stack } from '@fluentui/react';
-import { getOrCreateMsalInstance } from './msalConfig';
+import { getMsalInstance } from './msalInstance';
 
 /**
  * Initializes MSAL before rendering children (required for redirect flows).
  */
 const MsalAppProvider: FC<PropsWithChildren> = ({ children }) => {
   const [ready, setReady] = useState(false);
-  const instance = getOrCreateMsalInstance();
+  const instance = getMsalInstance();
 
   useEffect(() => {
     let cancelled = false;

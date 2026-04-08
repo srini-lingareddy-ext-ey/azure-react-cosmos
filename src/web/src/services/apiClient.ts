@@ -22,9 +22,16 @@ export interface Entity {
 
 export const CORRELATION_HEADER = 'X-Correlation-ID';
 
+/** Sent on authenticated requests when tenant context is selected (WO-6). */
+export const TENANT_ID_HEADER = 'X-Tenant-Id';
+
 type TokenGetter = () => Promise<string | null>;
 
 let tokenGetter: TokenGetter = async () => null;
+
+type TenantIdGetter = () => string | null;
+
+let tenantIdGetter: TenantIdGetter = () => null;
 
 /** Optional: use a stable correlation id per user action (e.g. from telemetry). Default: new UUID per request. */
 export type CorrelationIdProvider = () => string;
@@ -35,7 +42,7 @@ export function setCorrelationIdProvider(provider: CorrelationIdProvider | null)
 }
 
 /**
- * Registered from AuthTokenBridge when MSAL is active.
+ * Registered from AuthContext when MSAL is active.
  */
 export function registerApiTokenGetter(getter: TokenGetter): void {
   tokenGetter = getter;
@@ -43,6 +50,14 @@ export function registerApiTokenGetter(getter: TokenGetter): void {
 
 export function resetApiTokenGetter(): void {
   tokenGetter = async () => null;
+}
+
+export function registerTenantIdGetter(getter: TenantIdGetter): void {
+  tenantIdGetter = getter;
+}
+
+export function resetTenantIdGetter(): void {
+  tenantIdGetter = () => null;
 }
 
 type ConfigWithCorrelation = InternalAxiosRequestConfig & {
@@ -62,6 +77,22 @@ export function attachBearerTokenInterceptor(instance: AxiosInstance): void {
         }
       } catch {
         /* non-fatal */
+      }
+      return cfg;
+    },
+    (err) => Promise.reject(err)
+  );
+}
+
+export function attachTenantIdHeaderInterceptor(instance: AxiosInstance): void {
+  instance.interceptors.request.use(
+    (cfg: InternalAxiosRequestConfig) => {
+      if (!config.auth.isEnabled) {
+        return cfg;
+      }
+      const tenantId = tenantIdGetter();
+      if (tenantId) {
+        cfg.headers.set(TENANT_ID_HEADER, tenantId);
       }
       return cfg;
     },
@@ -113,6 +144,7 @@ function attachErrorResponseInterceptor(instance: AxiosInstance): void {
 export function applyStandardApiInterceptors(instance: AxiosInstance): void {
   attachCorrelationInterceptor(instance);
   attachBearerTokenInterceptor(instance);
+  attachTenantIdHeaderInterceptor(instance);
   attachIdempotencyInterceptor(instance);
   attachErrorResponseInterceptor(instance);
 }
