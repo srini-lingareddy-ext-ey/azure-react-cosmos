@@ -18,6 +18,7 @@ public static class CosmosServiceCollectionExtensions
     /// <summary>
     /// Adds Cosmos DB client with session consistency and optional RU monitoring.
     /// Only registers when AZURE_COSMOS_ENDPOINT is set.
+    /// Uses <c>AZURE_COSMOS_KEY</c> when set (account key); otherwise <see cref="DefaultAzureCredential"/> (managed identity or Azure CLI locally).
     /// </summary>
     public static IServiceCollection AddCosmosDbClient(this IServiceCollection services, IConfiguration configuration)
     {
@@ -25,7 +26,6 @@ public static class CosmosServiceCollectionExtensions
         if (string.IsNullOrEmpty(endpoint))
             return services;
 
-        var credential = new DefaultAzureCredential();
         var options = new CosmosClientOptions
         {
             SerializerOptions = new CosmosSerializationOptions
@@ -35,7 +35,12 @@ public static class CosmosServiceCollectionExtensions
             ConsistencyLevel = ConsistencyLevel.Session,
             ApplicationRegion = configuration["AZURE_LOCATION"] ?? null,
         };
-        var client = new CosmosClient(endpoint, credential, options);
+
+        // Local dev: set AZURE_COSMOS_KEY (user-secrets or env). Azure: omit key and use DefaultAzureCredential.
+        var accountKey = configuration["AZURE_COSMOS_KEY"];
+        CosmosClient client = !string.IsNullOrWhiteSpace(accountKey)
+            ? new CosmosClient(endpoint, accountKey, options)
+            : new CosmosClient(endpoint, new DefaultAzureCredential(), options);
         services.AddSingleton(client);
         return services;
     }
@@ -43,7 +48,7 @@ public static class CosmosServiceCollectionExtensions
     /// <summary>
     /// Registers <see cref="IRepository{T}"/> with Cosmos DB implementation for the given database, container, and partition key path.
     /// </summary>
-    /// <typeparam name="T">Entity type (must implement Domain.Entities.IDomainEntity).</typeparam>
+    /// <typeparam name="T">Entity type (must implement <see cref="IDomainEntity"/>).</typeparam>
     /// <param name="databaseId">Cosmos database id.</param>
     /// <param name="containerId">Container id.</param>
     /// <param name="partitionKeyPath">Partition key path (e.g. "/partitionKey").</param>
@@ -51,7 +56,7 @@ public static class CosmosServiceCollectionExtensions
         this IServiceCollection services,
         string databaseId,
         string containerId,
-        string partitionKeyPath) where T : class, Domain.Entities.IDomainEntity
+        string partitionKeyPath) where T : class, IDomainEntity
     {
         services.AddSingleton<IRepository<T>>(sp =>
         {
@@ -64,8 +69,7 @@ public static class CosmosServiceCollectionExtensions
     }
 
     /// <summary>
-    /// WO-4 / WO-5: registers <see cref="IRepository{Tenant}"/>, <see cref="ITenantRepository"/>,
-    /// <see cref="IRepository{UserRoleAssignment}"/>, and <see cref="IUserRoleAssignmentRepository"/> for the given database.
+    /// Registers tenant, user-role-assignment, and user-invitation repositories for the given database (WO-4 / WO-5 and invitations).
     /// </summary>
     public static IServiceCollection AddAppCosmosRepositories(this IServiceCollection services, string databaseId)
     {
