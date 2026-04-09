@@ -1,4 +1,5 @@
 import { FC } from 'react';
+import { Link } from 'react-router-dom';
 import { Stack, Text } from '@fluentui/react';
 import { stackPadding } from '../../styles/styles';
 import RoleGuard from '../../auth/RoleGuard';
@@ -18,6 +19,11 @@ const HomePage: FC = () => {
       <RoleGuard requiredRoles={['Admin', 'PlatformAdmin']}>
         <Text variant="medium">
           Admin tools: this line is only shown for Admin or Platform Admin roles.
+        </Text>
+      </RoleGuard>
+      <RoleGuard requiredRoles={['PlatformAdmin']}>
+        <Text variant="medium">
+          <Link to="/admin/tenants">Tenant administration</Link>
         </Text>
       </RoleGuard>
     </Stack>

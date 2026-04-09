@@ -6,6 +6,7 @@ import Telemetry from '../../components/shared/Telemetry';
 import config from '../../config';
 import MsalAppProvider from '../../auth/MsalAppProvider';
 import { AuthContextProvider } from '../../auth/AuthContext';
+import { ToastProvider } from '../../components/shared/ToastProvider';
 import AppQueryProvider from '../../query/AppQueryProvider';
 
 const AppProviders: FC<PropsWithChildren<unknown>> = ({ children }) => {
@@ -18,13 +19,15 @@ const AppProviders: FC<PropsWithChildren<unknown>> = ({ children }) => {
   return (
     <ThemeProvider applyTo="body" theme={DarkTheme}>
       <AppQueryProvider>
-        {config.auth.isEnabled ? (
-          <MsalAppProvider>
+        <ToastProvider>
+          {config.auth.isEnabled ? (
+            <MsalAppProvider>
+              <AuthContextProvider>{routerTree}</AuthContextProvider>
+            </MsalAppProvider>
+          ) : (
             <AuthContextProvider>{routerTree}</AuthContextProvider>
-          </MsalAppProvider>
-        ) : (
-          <AuthContextProvider>{routerTree}</AuthContextProvider>
-        )}
+          )}
+        </ToastProvider>
       </AppQueryProvider>
     </ThemeProvider>
   );
