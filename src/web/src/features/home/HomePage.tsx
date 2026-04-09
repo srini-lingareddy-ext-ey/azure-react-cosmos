@@ -17,9 +17,14 @@ const HomePage: FC = () => {
         to get started.
       </Text>
       <RoleGuard requiredRoles={['Admin', 'PlatformAdmin']}>
-        <Text variant="medium">
-          Admin tools: this line is only shown for Admin or Platform Admin roles.
-        </Text>
+        <Stack tokens={{ childrenGap: 8 }}>
+          <Text variant="medium">
+            Admin tools: this line is only shown for Admin or Platform Admin roles.
+          </Text>
+          <Text variant="medium">
+            <Link to="/admin/users">User management</Link>
+          </Text>
+        </Stack>
       </RoleGuard>
       <RoleGuard requiredRoles={['PlatformAdmin']}>
         <Text variant="medium">

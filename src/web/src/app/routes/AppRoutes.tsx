@@ -8,6 +8,7 @@ import {
   TenantRosterPage,
   TenantDetailPage,
 } from '../../features/tenants';
+import { UserRosterPage } from '../../features/users';
 
 const AppRoutes: React.FC = () => {
   return (
@@ -16,6 +17,14 @@ const AppRoutes: React.FC = () => {
       <Route element={<AuthGuard />}>
         <Route element={<AppLayout />}>
           <Route path="/" element={<HomePage />} />
+          <Route
+            path="/admin/users"
+            element={
+              <RoleGuard requiredRoles={['Admin', 'PlatformAdmin']}>
+                <UserRosterPage />
+              </RoleGuard>
+            }
+          />
           <Route
             path="/admin/tenants"
             element={
