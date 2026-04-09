@@ -18,7 +18,13 @@ import {
   resetApiTokenGetter,
   resetTenantIdGetter,
 } from '../services/apiClient';
-import { AuthMeUser, isAuthMeUser } from './authMe';
+import { getActiveRole } from './activeRole';
+import {
+  AuthMeUser,
+  isAuthMeUser,
+  isUserNotProvisionedResponse,
+} from './authMe';
+import type { Role } from '../types/roles';
 import {
   getLoginRequestScopes,
   getTokenRequestScopes,
@@ -30,6 +36,10 @@ export interface AuthContextValue {
   user: AuthMeUser | null;
   isAuthenticated: boolean;
   isLoading: boolean;
+  /** True when GET /api/v1/auth/me returned 401 (API rejected the token). */
+  apiUnauthorized: boolean;
+  isUnprovisioned: boolean;
+  activeRole: Role | null;
   activeTenant: string | null;
   setActiveTenant: (tenantId: string | null) => void;
   logout: () => void;
@@ -39,6 +49,9 @@ const AUTH_DISABLED: AuthContextValue = {
   user: null,
   isAuthenticated: true,
   isLoading: false,
+  apiUnauthorized: false,
+  isUnprovisioned: false,
+  activeRole: null,
   activeTenant: null,
   setActiveTenant: () => {},
   logout: () => {},
@@ -67,6 +80,7 @@ const AuthContextProviderMsal: FC<PropsWithChildren> = ({ children }) => {
   const [user, setUser] = useState<AuthMeUser | null>(null);
   const [meLoading, setMeLoading] = useState(false);
   const [meUnauthorized, setMeUnauthorized] = useState(false);
+  const [meUnprovisioned, setMeUnprovisioned] = useState(false);
   const [activeTenant, setActiveTenantState] = useState<string | null>(
     readStoredTenantId
   );
@@ -95,6 +109,7 @@ const AuthContextProviderMsal: FC<PropsWithChildren> = ({ children }) => {
     const postLogout = config.auth.postLogoutRedirectUri || origin;
     setUser(null);
     setMeUnauthorized(false);
+    setMeUnprovisioned(false);
     setActiveTenantState(null);
     if (typeof window !== 'undefined') {
       localStorage.removeItem(ACTIVE_TENANT_STORAGE_KEY);
@@ -162,6 +177,7 @@ const AuthContextProviderMsal: FC<PropsWithChildren> = ({ children }) => {
     if (!accountKey) {
       setUser(null);
       setMeUnauthorized(false);
+      setMeUnprovisioned(false);
       setMeLoading(false);
       setActiveTenant(null);
       return;
@@ -172,6 +188,7 @@ const AuthContextProviderMsal: FC<PropsWithChildren> = ({ children }) => {
     const run = async () => {
       setMeLoading(true);
       setMeUnauthorized(false);
+      setMeUnprovisioned(false);
       try {
         const res = await apiClient.get<unknown>('/api/v1/auth/me', {
           validateStatus: () => true,
@@ -181,18 +198,27 @@ const AuthContextProviderMsal: FC<PropsWithChildren> = ({ children }) => {
         if (res.status === 401) {
           setUser(null);
           setMeUnauthorized(true);
+          setMeUnprovisioned(false);
           return;
         }
 
         if (res.status === 403) {
           setMeUnauthorized(false);
+          if (isUserNotProvisionedResponse(res.data)) {
+            setUser(null);
+            setMeUnprovisioned(true);
+            setActiveTenant(null);
+            return;
+          }
           if (isAuthMeUser(res.data)) {
+            setMeUnprovisioned(false);
             setUser(res.data);
             const next = resolveInitialTenant(res.data, readStoredTenantId());
             if (next !== null) {
               setActiveTenant(next);
             }
           } else {
+            setMeUnprovisioned(false);
             setUser(null);
           }
           return;
@@ -201,6 +227,7 @@ const AuthContextProviderMsal: FC<PropsWithChildren> = ({ children }) => {
         if (res.status === 200 && isAuthMeUser(res.data)) {
           setUser(res.data);
           setMeUnauthorized(false);
+          setMeUnprovisioned(false);
           const next = resolveInitialTenant(res.data, readStoredTenantId());
           setActiveTenant(next);
           return;
@@ -208,10 +235,12 @@ const AuthContextProviderMsal: FC<PropsWithChildren> = ({ children }) => {
 
         setUser(null);
         setMeUnauthorized(false);
+        setMeUnprovisioned(false);
       } catch {
         if (!cancelled) {
           setUser(null);
           setMeUnauthorized(false);
+          setMeUnprovisioned(false);
         }
       } finally {
         if (!cancelled) {
@@ -230,12 +259,21 @@ const AuthContextProviderMsal: FC<PropsWithChildren> = ({ children }) => {
   const value = useMemo((): AuthContextValue => {
     const isAuthenticated =
       !config.auth.isEnabled ||
-      (!!account && !meLoading && !meUnauthorized);
+      (!!account &&
+        !meLoading &&
+        !meUnauthorized &&
+        !meUnprovisioned &&
+        !!user);
+
+    const activeRole = getActiveRole(user, activeTenant);
 
     return {
       user,
       isAuthenticated,
       isLoading: meLoading,
+      apiUnauthorized: meUnauthorized,
+      isUnprovisioned: meUnprovisioned,
+      activeRole,
       activeTenant,
       setActiveTenant,
       logout,
@@ -246,6 +284,7 @@ const AuthContextProviderMsal: FC<PropsWithChildren> = ({ children }) => {
     logout,
     meLoading,
     meUnauthorized,
+    meUnprovisioned,
     setActiveTenant,
     user,
   ]);
