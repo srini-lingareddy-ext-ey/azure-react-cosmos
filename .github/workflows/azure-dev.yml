@@ -148,7 +148,8 @@ jobs:
           VITE_MSAL_POST_LOGOUT_REDIRECT_URI: ${{ vars.VITE_MSAL_POST_LOGOUT_REDIRECT_URI }}
           VITE_MSAL_API_SCOPES: ${{ vars.VITE_MSAL_API_SCOPES }}
 
-      # WO-2: fail the workflow if the deployed API does not respond on liveness
+      # WO-2: fail the workflow if the deployed API does not respond on liveness.
+      # Linux App Service often needs a warm-up after zip deploy (curl 28 = timeout); retry with backoff.
       - name: Smoke test — API /health/live
         run: |
           set -euo pipefail
@@ -163,5 +164,17 @@ jobs:
           API_BASE_URL=$(printf '%s' "$API_BASE_URL" | sed 's/^"//;s/"$//')
           URL="${API_BASE_URL%/}/health/live"
           echo "GET $URL"
-          curl -fsS -o /dev/null --connect-timeout 30 --max-time 60 "$URL"
-          echo "Smoke test passed (HTTP 2xx)"
+          success=0
+          for i in $(seq 1 12); do
+            if curl -fsS -o /dev/null --connect-timeout 45 --max-time 120 "$URL"; then
+              echo "Smoke test passed (HTTP 2xx) on attempt ${i}"
+              success=1
+              break
+            fi
+            echo "Attempt ${i} failed (App Service may still be warming or restarting); waiting 25s..."
+            sleep 25
+          done
+          if [ "${success}" -ne 1 ]; then
+            echo "::error::Smoke test failed after 12 attempts (~5–6 min). Check App Service: deployment, Always On, TLS, and that the API process starts (Log stream / Application Insights)."
+            exit 1
+          fi
