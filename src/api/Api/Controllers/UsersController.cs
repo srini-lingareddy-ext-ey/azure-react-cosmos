@@ -51,6 +51,26 @@ public sealed class UsersController : ControllerBase
         return Ok(result);
     }
 
+    /// <summary>WO-11: add user by id or invite by email.</summary>
+    [HttpPost]
+    [ProducesResponseType(typeof(AddUserResponse), StatusCodes.Status201Created)]
+    public async Task<ActionResult<AddUserResponse>> AddUserAsync(
+        [FromRoute] string tenantId,
+        [FromBody] AddUserRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        if (!EnsureTenantRouteMatchesContext(tenantId, out var forbidden))
+        {
+            return forbidden;
+        }
+
+        var actorId = _currentUser.UserId ?? string.Empty;
+        var result = await _userManagement
+            .AddUserAsync(actorId, tenantId, request, cancellationToken)
+            .ConfigureAwait(false);
+        return StatusCode(StatusCodes.Status201Created, result);
+    }
+
     /// <summary>Change role (PlatformAdmin or tenant Admin; cannot change own role).</summary>
     [HttpPatch("{userId}/role")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]

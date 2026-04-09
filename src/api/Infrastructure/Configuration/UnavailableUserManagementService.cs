@@ -41,4 +41,11 @@ public sealed class UnavailableUserManagementService : IUserManagementService
         string targetUserId,
         CancellationToken cancellationToken = default) =>
         throw Ex;
+
+    public Task<AddUserResponse> AddUserAsync(
+        string actorUserId,
+        string tenantId,
+        AddUserRequest request,
+        CancellationToken cancellationToken = default) =>
+        throw Ex;
 }

@@ -1,7 +1,9 @@
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using Todo.Api.Application.Services;
+using Todo.Api.Application.Transport;
 using Todo.Api.Domain.Entities;
+using Todo.Api.Domain.Exceptions;
 using Todo.Api.Domain.Repositories;
 using Xunit;
 
@@ -22,9 +24,15 @@ public sealed class UserManagementServiceTests
         await Task.CompletedTask;
     }
 
-    private static UserManagementService CreateSut(Mock<IUserRoleAssignmentRepository> assignmentRepo)
+    private static UserManagementService CreateSut(
+        Mock<IUserRoleAssignmentRepository> assignmentRepo,
+        Mock<IUserInvitationRepository>? invitationRepo = null)
     {
-        return new UserManagementService(assignmentRepo.Object, NullLogger<UserManagementService>.Instance);
+        invitationRepo ??= new Mock<IUserInvitationRepository>();
+        return new UserManagementService(
+            assignmentRepo.Object,
+            invitationRepo.Object,
+            NullLogger<UserManagementService>.Instance);
     }
 
     [Fact]
@@ -140,5 +148,126 @@ public sealed class UserManagementServiceTests
 
         await Assert.ThrowsAsync<UnauthorizedAccessException>(() =>
             sut.GetRosterAsync("viewer", TenantId, null, null, 50, 0));
+    }
+
+    [Fact]
+    public async Task AddUserAsync_ByUserId_CreatesAssignment_WhenNoneExists()
+    {
+        var adminAssignment = new UserRoleAssignment
+        {
+            TenantId = TenantId,
+            UserId = AdminId,
+            Role = UserRole.Admin,
+            Status = UserStatus.Active,
+        };
+        var assignmentRepo = new Mock<IUserRoleAssignmentRepository>();
+        assignmentRepo
+            .Setup(r => r.GetAllByUserAsync(AdminId, It.IsAny<CancellationToken>()))
+            .Returns(YieldAsync(adminAssignment));
+        assignmentRepo
+            .Setup(r => r.GetByUserAndTenantAsync(AdminId, TenantId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(adminAssignment);
+        assignmentRepo
+            .Setup(r => r.GetByUserAndTenantAsync("new-user", TenantId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync((UserRoleAssignment?)null);
+        assignmentRepo
+            .Setup(r => r.CreateAsync(It.IsAny<UserRoleAssignment>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((UserRoleAssignment a, CancellationToken _) => a);
+
+        var sut = CreateSut(assignmentRepo);
+
+        var result = await sut.AddUserAsync(
+            AdminId,
+            TenantId,
+            new AddUserRequest { UserId = "new-user", Role = UserRole.Viewer });
+
+        Assert.Equal("assignment", result.Kind);
+        Assert.False(string.IsNullOrEmpty(result.Id));
+        assignmentRepo.Verify(
+            r => r.CreateAsync(It.Is<UserRoleAssignment>(a => a.UserId == "new-user" && a.Status == UserStatus.Active), It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task AddUserAsync_ByEmail_CreatesInvitation_WithExpiry72h()
+    {
+        var adminAssignment = new UserRoleAssignment
+        {
+            TenantId = TenantId,
+            UserId = AdminId,
+            Role = UserRole.Admin,
+            Status = UserStatus.Active,
+        };
+        var assignmentRepo = new Mock<IUserRoleAssignmentRepository>();
+        assignmentRepo
+            .Setup(r => r.GetAllByUserAsync(AdminId, It.IsAny<CancellationToken>()))
+            .Returns(YieldAsync(adminAssignment));
+        assignmentRepo
+            .Setup(r => r.GetByUserAndTenantAsync(AdminId, TenantId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(adminAssignment);
+        assignmentRepo
+            .Setup(r => r.GetAllByTenantAsync(TenantId, It.IsAny<CancellationToken>()))
+            .Returns(YieldAsync());
+
+        UserInvitation? created = null;
+        var invitationRepo = new Mock<IUserInvitationRepository>();
+        invitationRepo
+            .Setup(r => r.GetByEmailAndTenantAsync("a@b.com", TenantId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync((UserInvitation?)null);
+        invitationRepo
+            .Setup(r => r.CreateAsync(It.IsAny<UserInvitation>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((UserInvitation i, CancellationToken _) =>
+            {
+                created = i;
+                return i;
+            });
+
+        var sut = CreateSut(assignmentRepo, invitationRepo);
+
+        var result = await sut.AddUserAsync(
+            AdminId,
+            TenantId,
+            new AddUserRequest { Email = "a@b.com", Role = UserRole.Operator });
+
+        Assert.Equal("invitation", result.Kind);
+        Assert.NotNull(created);
+        Assert.Equal("a@b.com", created!.Email);
+        Assert.Equal(InvitationStatus.Pending, created.Status);
+        Assert.Equal(2592000, created.Ttl);
+        var delta = created.ExpiresAt - created.InvitedAt;
+        Assert.InRange(delta.TotalHours, 72 - 0.01, 72 + 0.01);
+    }
+
+    [Fact]
+    public async Task AddUserAsync_DuplicateActiveAssignment_ThrowsActiveUserAssignmentConflictException()
+    {
+        var adminAssignment = new UserRoleAssignment
+        {
+            TenantId = TenantId,
+            UserId = AdminId,
+            Role = UserRole.Admin,
+            Status = UserStatus.Active,
+        };
+        var assignmentRepo = new Mock<IUserRoleAssignmentRepository>();
+        assignmentRepo
+            .Setup(r => r.GetAllByUserAsync(AdminId, It.IsAny<CancellationToken>()))
+            .Returns(YieldAsync(adminAssignment));
+        assignmentRepo
+            .Setup(r => r.GetByUserAndTenantAsync(AdminId, TenantId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(adminAssignment);
+        assignmentRepo
+            .Setup(r => r.GetByUserAndTenantAsync("dup", TenantId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new UserRoleAssignment
+            {
+                TenantId = TenantId,
+                UserId = "dup",
+                Status = UserStatus.Active,
+                Role = UserRole.Viewer,
+            });
+
+        var sut = CreateSut(assignmentRepo);
+
+        await Assert.ThrowsAsync<ActiveUserAssignmentConflictException>(() =>
+            sut.AddUserAsync(AdminId, TenantId, new AddUserRequest { UserId = "dup", Role = UserRole.Admin }));
     }
 }

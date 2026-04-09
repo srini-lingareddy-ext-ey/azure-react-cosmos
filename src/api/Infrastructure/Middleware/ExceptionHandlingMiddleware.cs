@@ -86,6 +86,10 @@ public sealed class ExceptionHandlingMiddleware
 
             TenantNameConflictException ex => (HttpStatusCode.Conflict, ErrorCodes.Conflict, ex.Message),
 
+            ActiveUserAssignmentConflictException ex => (HttpStatusCode.Conflict, ErrorCodes.Conflict, ex.Message),
+
+            PendingInvitationConflictException ex => (HttpStatusCode.Conflict, ErrorCodes.Conflict, ex.Message),
+
             UnauthorizedAccessException ex => (HttpStatusCode.Forbidden, ErrorCodes.Forbidden, string.IsNullOrEmpty(ex.Message) ? "Access denied." : ex.Message),
 
             KeyNotFoundException ex => (HttpStatusCode.NotFound, ErrorCodes.NotFound, ex.Message),

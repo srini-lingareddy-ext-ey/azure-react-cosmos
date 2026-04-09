@@ -33,4 +33,11 @@ public interface IUserManagementService
         string tenantId,
         string targetUserId,
         CancellationToken cancellationToken = default);
+
+    /// <summary>WO-11: add user by id or create email invitation.</summary>
+    Task<AddUserResponse> AddUserAsync(
+        string actorUserId,
+        string tenantId,
+        AddUserRequest request,
+        CancellationToken cancellationToken = default);
 }

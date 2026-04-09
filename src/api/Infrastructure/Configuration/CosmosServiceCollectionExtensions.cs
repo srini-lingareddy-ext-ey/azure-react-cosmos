@@ -74,6 +74,9 @@ public static class CosmosServiceCollectionExtensions
 
         services.AddCosmosDbRepository<UserRoleAssignment>(databaseId, "user-role-assignment", "/tenantId");
         services.AddSingleton<IUserRoleAssignmentRepository, UserRoleAssignmentRepository>();
+
+        services.AddCosmosDbRepository<UserInvitation>(databaseId, "user-invitation", "/tenantId");
+        services.AddSingleton<IUserInvitationRepository, UserInvitationRepository>();
         return services;
     }
 }
