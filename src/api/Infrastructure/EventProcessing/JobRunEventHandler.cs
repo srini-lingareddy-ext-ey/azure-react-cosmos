@@ -1,8 +1,8 @@
 ﻿using System.Text.Json;
-using Todo.Api.Application.Connectors;
+using Todo.Api.Application.EventPublishing;
 using Todo.Api.Domain.Entities;
 using Todo.Api.Domain.Repositories;
-using Todo.Api.Infrastructure.Connectors;
+
 
 namespace Todo.Api.Infrastructure.EventProcessing;
 

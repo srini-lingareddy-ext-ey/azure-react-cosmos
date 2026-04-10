@@ -1,4 +1,5 @@
-﻿using Todo.Api.Application.Connectors;
+﻿using Todo.Api.Application.EventPublishing;
+using Todo.Api.Application.Connectors;
 using Todo.Api.Domain.Entities;
 
 namespace Todo.Api.Infrastructure.Connectors.Adapters;
@@ -18,3 +19,4 @@ public sealed class CustomWebhookAdapter : IConnectorAdapter
     public NormalizedEvent NormalizeEvent(string rawPayload, string connectorId, string tenantId)
         => new() { EventType = "custom-webhook", ConnectorId = connectorId, TenantId = tenantId, Payload = rawPayload };
 }
+

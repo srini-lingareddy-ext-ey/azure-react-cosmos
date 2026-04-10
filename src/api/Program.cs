@@ -45,6 +45,23 @@ if (!builder.Environment.IsDevelopment())
     }
 }
 
+// WO-41: Azure Event Hubs strongly-typed options
+builder.Services.Configure<Todo.Api.Infrastructure.Configuration.EventHubSettings>(
+    builder.Configuration.GetSection(Todo.Api.Infrastructure.Configuration.EventHubSettings.SectionName));
+
+// WO-48: Event publisher — EventHubPublisher when configured, NoOp fallback for local dev
+var ehNamespace = builder.Configuration["EventHubs:FullyQualifiedNamespace"];
+if (!string.IsNullOrWhiteSpace(ehNamespace) && ehNamespace != "localhost")
+{
+    builder.Services.AddSingleton<Todo.Api.Application.EventPublishing.IEventPublisher,
+        Todo.Api.Infrastructure.EventPublishing.EventHubPublisher>();
+}
+else
+{
+    builder.Services.AddSingleton<Todo.Api.Application.EventPublishing.IEventPublisher,
+        Todo.Api.Infrastructure.EventPublishing.NoOpEventPublisher>();
+}
+
 // WO-17: Credential encryption (AES-256-GCM with per-tenant HKDF key derivation)
 builder.Services.Configure<Todo.Api.Infrastructure.Security.CredentialEncryptionOptions>(
     builder.Configuration.GetSection(Todo.Api.Infrastructure.Security.CredentialEncryptionOptions.SectionName));
@@ -108,8 +125,7 @@ if (!string.IsNullOrEmpty(builder.Configuration["AZURE_COSMOS_ENDPOINT"]))
     builder.Services.AddScoped<Todo.Api.Application.Connectors.IConnectorAdapter, Todo.Api.Infrastructure.Connectors.Adapters.SqlServerAdapter>();
     builder.Services.AddScoped<Todo.Api.Application.Connectors.IConnectorAdapter, Todo.Api.Infrastructure.Connectors.Adapters.AzureSynapseAdapter>();
     builder.Services.AddScoped<Todo.Api.Application.Connectors.IConnectorAdapter, Todo.Api.Infrastructure.Connectors.Adapters.CustomWebhookAdapter>();
-    // WO-48: Event publisher and execution engine
-    builder.Services.AddSingleton<Todo.Api.Infrastructure.Connectors.IEventPublisher, Todo.Api.Infrastructure.Connectors.NoOpEventPublisher>();
+    // WO-48: Connector health tracker and execution engine
     builder.Services.AddScoped<Todo.Api.Infrastructure.Connectors.ConnectorHealthTracker>();
     builder.Services.AddHostedService<Todo.Api.Infrastructure.Connectors.ConnectorExecutionEngine>();
     // WO-26: Kafka event processor + event handlers

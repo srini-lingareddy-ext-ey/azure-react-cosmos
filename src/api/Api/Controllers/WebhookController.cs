@@ -2,7 +2,7 @@
 using Todo.Api.Application.Connectors;
 using Todo.Api.Application.Services;
 using Todo.Api.Domain.Repositories;
-using Todo.Api.Infrastructure.Connectors;
+using Todo.Api.Application.EventPublishing;
 
 namespace Todo.Api.Api.Controllers;
 

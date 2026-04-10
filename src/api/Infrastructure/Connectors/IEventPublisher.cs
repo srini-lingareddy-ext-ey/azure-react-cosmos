@@ -1,22 +1,8 @@
-﻿using Todo.Api.Application.Connectors;
+﻿using Todo.Api.Application.EventPublishing;
 
 namespace Todo.Api.Infrastructure.Connectors;
 
-/// <summary>WO-48: abstraction over Event Hubs / Kafka publishing for testability.</summary>
-public interface IEventPublisher
-{
-    Task PublishAsync(string hubName, NormalizedEvent evt, CancellationToken cancellationToken = default);
-}
-
-/// <summary>WO-48: no-op publisher for local dev / when Event Hubs is not configured.</summary>
-public sealed class NoOpEventPublisher : IEventPublisher
-{
-    private readonly ILogger<NoOpEventPublisher> _logger;
-    public NoOpEventPublisher(ILogger<NoOpEventPublisher> logger) { _logger = logger; }
-
-    public Task PublishAsync(string hubName, NormalizedEvent evt, CancellationToken cancellationToken = default)
-    {
-        _logger.LogDebug("NoOpEventPublisher: would publish to {Hub} for connector {ConnectorId}", hubName, evt.ConnectorId);
-        return Task.CompletedTask;
-    }
-}
+// WO-48: IEventPublisher and NoOpEventPublisher have moved to
+// Application.EventPublishing and Infrastructure.EventPublishing respectively.
+// This file provides backward-compatible type aliases so existing references compile.
+// New code should reference Todo.Api.Application.EventPublishing.IEventPublisher directly.
