@@ -72,6 +72,29 @@ const FingerprintAuditTrailPage = lazy(
   () => import('../../features/fingerprinting/FingerprintAuditTrailPage')
 );
 
+/* ── Phase 6 lazy imports ── */
+const IncidentListPage = lazy(
+  () => import('../../features/incidents/IncidentListPage')
+);
+const IncidentDetailPage = lazy(
+  () => import('../../features/incidents/IncidentDetailPage')
+);
+const ChannelListPage = lazy(
+  () => import('../../features/notifications/ChannelListPage')
+);
+const RoutingRuleListPage = lazy(
+  () => import('../../features/notifications/RoutingRuleListPage')
+);
+const MaintenanceWindowPage = lazy(
+  () => import('../../features/notifications/MaintenanceWindowPage')
+);
+const DeliveryLogPage = lazy(
+  () => import('../../features/notifications/DeliveryLogPage')
+);
+const ServiceNowConfigPage = lazy(
+  () => import('../../features/serviceNow/ServiceNowConfigPage')
+);
+
 const LazyFallback = <Spinner label="Loading…" />;
 
 const AppRoutes: React.FC = () => {
@@ -191,6 +214,21 @@ const AppRoutes: React.FC = () => {
             <Route path="windows" element={<ApprovedWindowsPage />} />
             <Route path="audit-trail" element={<FingerprintAuditTrailPage />} />
           </Route>
+
+          {/* ── Phase 6: Incidents ── */}
+          <Route path="/incidents" element={<Suspense fallback={LazyFallback}><IncidentListPage /></Suspense>} />
+          <Route path="/incidents/:id" element={<Suspense fallback={LazyFallback}><IncidentDetailPage /></Suspense>} />
+
+          {/* ── Phase 6: Notifications Config (Admin) ── */}
+          <Route path="/admin/notifications" element={<RoleGuard requiredRoles={['Admin', 'PlatformAdmin']}><Suspense fallback={LazyFallback}><Outlet /></Suspense></RoleGuard>}>
+            <Route path="channels" element={<ChannelListPage />} />
+            <Route path="routing-rules" element={<RoutingRuleListPage />} />
+            <Route path="maintenance-windows" element={<MaintenanceWindowPage />} />
+            <Route path="delivery-log" element={<DeliveryLogPage />} />
+          </Route>
+
+          {/* ── Phase 6: ServiceNow Config (Admin) ── */}
+          <Route path="/admin/servicenow" element={<RoleGuard requiredRoles={['Admin', 'PlatformAdmin']}><Suspense fallback={LazyFallback}><ServiceNowConfigPage /></Suspense></RoleGuard>} />
 
           {/* ── Wave 4: Connectors ── */}
           <Route

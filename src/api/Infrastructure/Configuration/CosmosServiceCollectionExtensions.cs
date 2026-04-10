@@ -193,6 +193,29 @@ public static class CosmosServiceCollectionExtensions
         services.AddCosmosDbRepository<FingerprintAuditEntry>(databaseId, "fingerprint-audit", "/tenantId");
         services.AddSingleton<IFingerprintAuditRepository, FingerprintAuditRepository>();
 
+        // Phase 6: Incident Management (WO-64)
+        services.AddCosmosDbRepository<IncidentRecord>(databaseId, "incident-records", "/tenantId");
+        services.AddSingleton<IIncidentRepository, IncidentRepository>();
+
+        services.AddCosmosDbRepository<ServiceNowIntegrationConfig>(databaseId, "servicenow-config", "/tenantId");
+        services.AddSingleton<IServiceNowConfigRepository, ServiceNowConfigRepository>();
+
+        // Phase 6: Failure Notifications (WO-65)
+        services.AddCosmosDbRepository<NotificationChannel>(databaseId, "notification-channel", "/tenantId");
+        services.AddSingleton<INotificationChannelRepository, NotificationChannelRepository>();
+
+        services.AddCosmosDbRepository<NotificationRoutingRule>(databaseId, "notification-routing-rule", "/tenantId");
+        services.AddSingleton<INotificationRoutingRuleRepository, NotificationRoutingRuleRepository>();
+
+        services.AddCosmosDbRepository<MaintenanceWindow>(databaseId, "maintenance-window", "/tenantId");
+        services.AddSingleton<IMaintenanceWindowRepository, MaintenanceWindowRepository>();
+
+        services.AddCosmosDbRepository<NotificationDeliveryLog>(databaseId, "notification-delivery-log", "/tenantId");
+        services.AddSingleton<INotificationDeliveryLogRepository, NotificationDeliveryLogRepository>();
+
+        services.AddCosmosDbRepository<NotificationTemplate>(databaseId, "notification-template", "/tenantId");
+        services.AddSingleton<INotificationTemplateRepository, NotificationTemplateRepository>();
+
         return services;
     }
 }

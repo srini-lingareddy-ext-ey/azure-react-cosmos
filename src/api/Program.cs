@@ -174,6 +174,23 @@ if (!string.IsNullOrEmpty(builder.Configuration["AZURE_COSMOS_ENDPOINT"]))
     builder.Services.AddHostedService<Todo.Api.Infrastructure.BackgroundJobs.EventRetentionPurgeJob>();
     builder.Services.AddHostedService<Todo.Api.Infrastructure.BackgroundJobs.FingerprintMonitoringJob>();
     builder.Services.AddScoped<IArtifactRetrievalService, Todo.Api.Infrastructure.Services.ArtifactRetrievalService>();
+    // WO-66: Incident creation service + event handler + ServiceNow client
+    builder.Services.AddScoped<IIncidentCreationService, IncidentCreationService>();
+    builder.Services.AddScoped<IDisplayIdGenerationService, DisplayIdGenerationService>();
+    builder.Services.AddScoped<Todo.Api.Infrastructure.Integrations.IServiceNowClient, Todo.Api.Infrastructure.Integrations.ServiceNowClient>();
+    builder.Services.AddScoped<Todo.Api.Infrastructure.EventProcessing.IEventHandler, Todo.Api.Infrastructure.EventProcessing.IncidentCreationEventHandler>();
+    // WO-67: Incident lifecycle API
+    builder.Services.AddScoped<IIncidentLifecycleService, IncidentLifecycleService>();
+    // WO-68: ServiceNow sync + escalation jobs
+    builder.Services.AddHostedService<Todo.Api.Infrastructure.BackgroundJobs.ServiceNowSyncJob>();
+    builder.Services.AddHostedService<Todo.Api.Infrastructure.BackgroundJobs.IncidentEscalationJob>();
+    // WO-69: Notification delivery service + event handler
+    builder.Services.AddScoped<INotificationDeliveryService, NotificationDeliveryService>();
+    builder.Services.AddScoped<Todo.Api.Infrastructure.EventProcessing.IEventHandler, Todo.Api.Infrastructure.EventProcessing.NotificationRequestEventHandler>();
+    // WO-70: Incident query API
+    builder.Services.AddScoped<IIncidentQueryService, IncidentQueryService>();
+    // WO-71: Notifications config API
+    builder.Services.AddScoped<INotificationsConfigService, NotificationsConfigService>();
 }
 else
 {
