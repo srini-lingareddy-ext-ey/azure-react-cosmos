@@ -157,6 +157,23 @@ if (!string.IsNullOrEmpty(builder.Configuration["AZURE_COSMOS_ENDPOINT"]))
     builder.Services.AddScoped<ISLAService, SLAService>();
     // WO-35: Infrastructure Monitoring API
     builder.Services.AddScoped<IInfrastructureMonitoringService, InfrastructureMonitoringService>();
+    // WO-58: Event Intelligence API
+    builder.Services.AddScoped<IEventService, EventService>();
+    // WO-60: Change Fingerprinting API
+    builder.Services.AddScoped<IFingerprintingService, FingerprintingService>();
+    // WO-55: Event processing pipeline stages
+    builder.Services.AddScoped<Todo.Api.Infrastructure.EventProcessing.EventNormalizationService>();
+    builder.Services.AddScoped<Todo.Api.Infrastructure.EventProcessing.EventEnrichmentService>();
+    builder.Services.AddScoped<Todo.Api.Infrastructure.EventProcessing.EventPersistenceService>();
+    builder.Services.AddScoped<Todo.Api.Infrastructure.EventProcessing.EventRoutingService>();
+    // WO-56: Classification engine + rule deployment
+    builder.Services.AddScoped<IClassificationEngine, ClassificationEngine>();
+    builder.Services.AddScoped<Todo.Api.Infrastructure.EventProcessing.ClassificationEventHandler>();
+    builder.Services.AddScoped<IRuleDeploymentService, RuleDeploymentService>();
+    // WO-57: Event retention purge + fingerprint monitoring jobs
+    builder.Services.AddHostedService<Todo.Api.Infrastructure.BackgroundJobs.EventRetentionPurgeJob>();
+    builder.Services.AddHostedService<Todo.Api.Infrastructure.BackgroundJobs.FingerprintMonitoringJob>();
+    builder.Services.AddScoped<IArtifactRetrievalService, Todo.Api.Infrastructure.Services.ArtifactRetrievalService>();
 }
 else
 {

@@ -167,6 +167,32 @@ public static class CosmosServiceCollectionExtensions
         services.AddCosmosDbRepository<ProductAvailability>(databaseId, "product-availability", "/tenantId");
         services.AddSingleton<IProductAvailabilityRepository, ProductAvailabilityRepository>();
 
+        // Phase 5: Event Intelligence (WO-52)
+        services.AddCosmosDbRepository<Event>(databaseId, "events", "/tenantId");
+        services.AddSingleton<IEventRepository, EventRepository>();
+
+        services.AddCosmosDbRepository<ClassificationAuditEntry>(databaseId, "classification-audit", "/tenantId");
+        services.AddSingleton<IClassificationAuditRepository, ClassificationAuditRepository>();
+
+        // PurgeAuditEntry writes to existing audit-log container — no separate repo needed
+
+        // Phase 5: Classification Rules (WO-53)
+        services.AddCosmosDbRepository<ClassificationRule>(databaseId, "classification-rules", "/tenantId");
+        services.AddSingleton<IClassificationRuleRepository, ClassificationRuleRepository>();
+
+        // Phase 5: Change Fingerprinting (WO-54)
+        services.AddCosmosDbRepository<MonitoredArtifact>(databaseId, "monitored-artifact", "/tenantId");
+        services.AddSingleton<IMonitoredArtifactRepository, MonitoredArtifactRepository>();
+
+        services.AddCosmosDbRepository<ArtifactFingerprint>(databaseId, "artifact-fingerprint", "/tenantId");
+        services.AddSingleton<IArtifactFingerprintRepository, ArtifactFingerprintRepository>();
+
+        services.AddCosmosDbRepository<FingerprintApprovedWindow>(databaseId, "fingerprint-approved-window", "/tenantId");
+        services.AddSingleton<IFingerprintApprovedWindowRepository, FingerprintApprovedWindowRepository>();
+
+        services.AddCosmosDbRepository<FingerprintAuditEntry>(databaseId, "fingerprint-audit", "/tenantId");
+        services.AddSingleton<IFingerprintAuditRepository, FingerprintAuditRepository>();
+
         return services;
     }
 }

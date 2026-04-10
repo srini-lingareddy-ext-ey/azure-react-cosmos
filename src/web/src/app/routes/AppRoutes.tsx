@@ -52,6 +52,26 @@ const InfrastructurePage = lazy(
   () => import('../../features/infrastructureMonitoring/InfrastructurePage')
 );
 
+/* ── Phase 5 lazy imports ── */
+const EventLogPage = lazy(
+  () => import('../../features/eventLog/EventLogPage')
+);
+const ClassificationRulesPage = lazy(
+  () => import('../../features/classificationRules/ClassificationRulesPage')
+);
+const ClassificationAuditLogPage = lazy(
+  () => import('../../features/classificationRules/ClassificationAuditLogPage')
+);
+const ArtifactRegistryPage = lazy(
+  () => import('../../features/fingerprinting/ArtifactRegistryPage')
+);
+const ApprovedWindowsPage = lazy(
+  () => import('../../features/fingerprinting/ApprovedWindowsPage')
+);
+const FingerprintAuditTrailPage = lazy(
+  () => import('../../features/fingerprinting/FingerprintAuditTrailPage')
+);
+
 const LazyFallback = <Spinner label="Loading…" />;
 
 const AppRoutes: React.FC = () => {
@@ -155,6 +175,22 @@ const AppRoutes: React.FC = () => {
 
           {/* ── Phase 4: Infrastructure Monitoring ── */}
           <Route path="/infrastructure" element={<Suspense fallback={LazyFallback}><InfrastructurePage /></Suspense>} />
+
+          {/* ── Phase 5: Event Log ── */}
+          <Route path="/events" element={<Suspense fallback={LazyFallback}><EventLogPage /></Suspense>} />
+
+          {/* ── Phase 5: Classification Rules (Admin) ── */}
+          <Route path="/admin/classification-rules" element={<RoleGuard requiredRoles={['Admin', 'PlatformAdmin']}><Suspense fallback={LazyFallback}><Outlet /></Suspense></RoleGuard>}>
+            <Route index element={<ClassificationRulesPage />} />
+            <Route path="audit-log" element={<ClassificationAuditLogPage />} />
+          </Route>
+
+          {/* ── Phase 5: Fingerprinting (Admin) ── */}
+          <Route path="/admin/fingerprinting" element={<RoleGuard requiredRoles={['Admin', 'PlatformAdmin']}><Suspense fallback={LazyFallback}><Outlet /></Suspense></RoleGuard>}>
+            <Route path="artifacts" element={<ArtifactRegistryPage />} />
+            <Route path="windows" element={<ApprovedWindowsPage />} />
+            <Route path="audit-trail" element={<FingerprintAuditTrailPage />} />
+          </Route>
 
           {/* ── Wave 4: Connectors ── */}
           <Route

@@ -1,0 +1,45 @@
+﻿# Default platform classification rules
+# These are applied for tenants without tenant-specific rules.
+# Deploy via CI/CD pipeline using IRuleDeploymentService.DeployAsync.
+rules:
+  - ruleId: "default-001"
+    priority: 10
+    description: "Critical pipeline failures are incidents"
+    conditions:
+      - field: "eventType"
+        operator: "equals"
+        value: "pipeline_execution"
+      - field: "severity"
+        operator: "equals"
+        value: "critical"
+    outcome: "incident"
+
+  - ruleId: "default-002"
+    priority: 20
+    description: "SLA breaches are SLA breach events"
+    conditions:
+      - field: "eventType"
+        operator: "contains"
+        value: "sla"
+    outcome: "slaBreach"
+
+  - ruleId: "default-003"
+    priority: 30
+    description: "Infrastructure critical events are availability issues"
+    conditions:
+      - field: "eventType"
+        operator: "equals"
+        value: "infrastructure_metric"
+      - field: "severity"
+        operator: "equals"
+        value: "critical"
+    outcome: "availabilityIssue"
+
+  - ruleId: "default-004"
+    priority: 100
+    description: "All other warning-level events are alerts"
+    conditions:
+      - field: "severity"
+        operator: "equals"
+        value: "warning"
+    outcome: "alert"
