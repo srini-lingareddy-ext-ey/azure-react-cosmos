@@ -1,4 +1,4 @@
-﻿namespace Todo.Api.Domain.Entities;
+namespace Todo.Api.Domain.Entities;
 
 public sealed class DailyAvailabilityEntry
 {
@@ -16,6 +16,8 @@ public sealed class ProductAvailability : IDomainEntity, IConcurrencyEntity
     public InfraHealthState Status { get; set; } = InfraHealthState.Unknown;
     public DateTimeOffset? LastHeartbeatAt { get; set; }
     public int HeartbeatIntervalSeconds { get; set; }
+    public int HeartbeatCount24h { get; set; }
+    public DateTimeOffset? HeartbeatWindowResetAt { get; set; }
     public List<DailyAvailabilityEntry> DailyAvailability { get; set; } = new();
     public DateTimeOffset? UpdatedAt { get; set; }
     public int SchemaVersion { get; set; } = 1;

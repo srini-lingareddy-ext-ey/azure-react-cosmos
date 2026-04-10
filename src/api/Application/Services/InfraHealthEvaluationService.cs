@@ -1,4 +1,6 @@
-﻿using Todo.Api.Domain.Entities;
+using System.Text.Json;
+using Todo.Api.Application.EventPublishing;
+using Todo.Api.Domain.Entities;
 using Todo.Api.Domain.Repositories;
 
 namespace Todo.Api.Application.Services;
@@ -10,6 +12,7 @@ public sealed class InfraHealthEvaluationService : IInfraHealthEvaluationService
     private readonly INodeHealthStatusRepository _nodeRepo;
     private readonly IInfraThresholdConfigRepository _configRepo;
     private readonly IProductAvailabilityRepository _productRepo;
+    private readonly IEventPublisher _eventPublisher;
     private readonly ILogger<InfraHealthEvaluationService> _logger;
 
     public InfraHealthEvaluationService(
@@ -18,6 +21,7 @@ public sealed class InfraHealthEvaluationService : IInfraHealthEvaluationService
         INodeHealthStatusRepository nodeRepo,
         IInfraThresholdConfigRepository configRepo,
         IProductAvailabilityRepository productRepo,
+        IEventPublisher eventPublisher,
         ILogger<InfraHealthEvaluationService> logger)
     {
         _tenantRepo = tenantRepo;
@@ -25,6 +29,7 @@ public sealed class InfraHealthEvaluationService : IInfraHealthEvaluationService
         _nodeRepo = nodeRepo;
         _configRepo = configRepo;
         _productRepo = productRepo;
+        _eventPublisher = eventPublisher;
         _logger = logger;
     }
 
@@ -44,6 +49,8 @@ public sealed class InfraHealthEvaluationService : IInfraHealthEvaluationService
 
         foreach (var component in components)
         {
+            var previousStatus = component.Status;
+
             var nodes = new List<NodeHealthStatus>();
             await foreach (var n in _nodeRepo.GetByComponentIdAsync(component.ComponentId, tenantId, ct).ConfigureAwait(false))
                 nodes.Add(n);
@@ -81,6 +88,75 @@ public sealed class InfraHealthEvaluationService : IInfraHealthEvaluationService
 
             component.EvaluatedAt = DateTimeOffset.UtcNow;
             await _componentRepo.UpsertAsync(component, ct).ConfigureAwait(false);
+
+            if (component.Status != previousStatus)
+            {
+                await PublishTransitionEventAsync(tenantId, component, previousStatus, ct).ConfigureAwait(false);
+            }
+        }
+
+        await EvaluateProductAvailabilityAsync(tenantId, ct).ConfigureAwait(false);
+    }
+
+    private async Task PublishTransitionEventAsync(
+        string tenantId, ComponentHealthStatus component, InfraHealthState previousStatus, CancellationToken ct)
+    {
+        var severity = component.Status == InfraHealthState.Critical ? "Critical" : "Warning";
+        var payload = JsonSerializer.Serialize(new
+        {
+            tenantId,
+            componentName = component.ComponentName,
+            componentId = component.ComponentId,
+            previousStatus = previousStatus.ToString(),
+            currentStatus = component.Status.ToString(),
+            evaluatedAt = component.EvaluatedAt,
+            nodeCount = component.NodeCount,
+            unhealthyNodeCount = component.UnhealthyNodeCount,
+        });
+
+        var evt = new NormalizedEvent
+        {
+            EventType = $"infra.threshold.{severity.ToLowerInvariant()}",
+            TenantId = tenantId,
+            Payload = payload,
+        };
+
+        await _eventPublisher.PublishAsync("InfrastructureEvents", evt, ct).ConfigureAwait(false);
+        _logger.LogInformation(
+            "Published {Severity} threshold breach for component {Component}: {Previous} -> {Current}",
+            severity, component.ComponentName, previousStatus, component.Status);
+    }
+
+    private async Task EvaluateProductAvailabilityAsync(string tenantId, CancellationToken ct)
+    {
+        var products = new List<ProductAvailability>();
+        await foreach (var p in _productRepo.GetAllByTenantAsync(tenantId, ct).ConfigureAwait(false))
+            products.Add(p);
+
+        foreach (var product in products)
+        {
+            if (product.HeartbeatIntervalSeconds <= 0)
+                continue;
+
+            var stalenessThreshold = product.HeartbeatIntervalSeconds * 3;
+
+            if (product.LastHeartbeatAt.HasValue &&
+                (DateTimeOffset.UtcNow - product.LastHeartbeatAt.Value).TotalSeconds > stalenessThreshold)
+            {
+                product.Status = InfraHealthState.Unknown;
+            }
+            else if (product.LastHeartbeatAt.HasValue)
+            {
+                var expectedHeartbeats = 86400.0 / product.HeartbeatIntervalSeconds;
+                var actual = product.HeartbeatCount24h;
+                product.Availability24h = expectedHeartbeats > 0
+                    ? Math.Round(actual / expectedHeartbeats * 100, 2)
+                    : 0;
+                product.Status = InfraHealthState.Healthy;
+            }
+
+            product.UpdatedAt = DateTimeOffset.UtcNow;
+            await _productRepo.UpsertAsync(product, ct).ConfigureAwait(false);
         }
     }
 }

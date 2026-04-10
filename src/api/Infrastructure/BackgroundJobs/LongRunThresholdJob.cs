@@ -1,4 +1,4 @@
-﻿using Todo.Api.Domain.Entities;
+using Todo.Api.Domain.Entities;
 using Todo.Api.Domain.Repositories;
 
 namespace Todo.Api.Infrastructure.BackgroundJobs;
@@ -72,6 +72,7 @@ public sealed class LongRunThresholdJob : BackgroundService
                             else
                             {
                                 threshold.IsApplicable = false;
+                                threshold.ThresholdSeconds = null;
                             }
 
                             await thresholdRepo.UpsertAsync(threshold, stoppingToken).ConfigureAwait(false);

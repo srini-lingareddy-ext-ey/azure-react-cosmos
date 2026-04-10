@@ -46,7 +46,7 @@ const DataQualityPage = lazy(
   () => import('../../features/dataQuality/DataQualityPage')
 );
 const SLATrackingPage = lazy(
-  () => import('../../features/slaTracking/SLATrackingPage')
+  () => import('../../features/sla/SLATrackingPage')
 );
 const InfrastructurePage = lazy(
   () => import('../../features/infrastructureMonitoring/InfrastructurePage')

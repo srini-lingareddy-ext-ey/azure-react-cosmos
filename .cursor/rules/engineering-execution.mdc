@@ -1,0 +1,70 @@
+---
+description: Global engineering, work order, testing, build, and git/pre-commit rules (8090 WO authority)
+globs: "**/*.{py,ts,tsx,go,md}"
+alwaysApply: false
+---
+
+# Engineering & Execution Rules
+
+**NON-NEGOTIABLE DIRECTIVE:** Follow these rules exactly.
+
+## Work order authority
+
+- All work **must** strictly follow the current **8090 Work Order**.
+- Do **not** add features, refactors, helpers, or improvements not explicitly specified.
+- If requirements are ambiguous, **stop** and ask for clarification.
+- Each Work Order maps to **exactly one** commit.
+- Never batch multiple Work Orders.
+
+## Execution & completion
+
+A Work Order is **not** complete until **all** of the following are true:
+
+- All tests pass locally.
+- Pre-commit hooks pass.
+- CI passes.
+- CD passes (if applicable).
+
+**Additional constraints**
+
+- If CI or CD fails, diagnose and fix immediately before continuing.
+- Do **not** proceed to another Work Order while the pipeline is red.
+- Assume your output will be executed exactly as written.
+
+## Test strategy (signal over noise)
+
+- Target **≥50%** coverage with **high-signal** tests only.
+- Every test must answer: *Would this catch a real production bug?*
+
+### High-signal tests (always include)
+
+- API workflows and integration paths.
+- Business logic and validation.
+- Error handling and failure modes.
+- Security and auth flows.
+- Cross-component behavior.
+
+### Low-signal tests (prohibited)
+
+- Field existence tests.
+- Getters / setters / constructors.
+- Framework behavior tests.
+- Configuration loading tests.
+- Coverage padding.
+
+## Build & correctness
+
+- Code **must** compile and type-check cleanly.
+- **Python:** mypy / pyright clean.
+- **TypeScript:** strict `tsc` clean.
+- Never emit code that cannot run.
+- Never access private/protected members outside their owning class/module.
+- Never bypass encapsulation “because it works”.
+
+## Git & pre-commit (enforced)
+
+Pre-commit hooks are **required**. Always run:
+
+```bash
+pre-commit run --all-files
+```

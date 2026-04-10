@@ -1,18 +1,19 @@
-﻿using System.Text.Json;
+using System.Text.Json;
 using Confluent.Kafka;
 using Microsoft.Extensions.Options;
+using Todo.Api.Infrastructure.Configuration;
 
 namespace Todo.Api.Infrastructure.EventProcessing;
 
 public sealed class EventProcessorBackgroundService : BackgroundService
 {
     private readonly IServiceProvider _serviceProvider;
-    private readonly KafkaSettings _settings;
+    private readonly EventHubSettings _settings;
     private readonly ILogger<EventProcessorBackgroundService> _logger;
 
     public EventProcessorBackgroundService(
         IServiceProvider serviceProvider,
-        IOptions<KafkaSettings> settings,
+        IOptions<EventHubSettings> settings,
         ILogger<EventProcessorBackgroundService> logger)
     {
         _serviceProvider = serviceProvider;
@@ -22,24 +23,36 @@ public sealed class EventProcessorBackgroundService : BackgroundService
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        if (string.IsNullOrWhiteSpace(_settings.BootstrapServers))
+        if (string.IsNullOrWhiteSpace(_settings.FullyQualifiedNamespace))
         {
-            _logger.LogInformation("Kafka not configured — EventProcessor disabled");
+            _logger.LogInformation("EventHubs not configured — EventProcessor disabled");
             return;
         }
 
         var config = new ConsumerConfig
         {
-            BootstrapServers = _settings.BootstrapServers,
+            BootstrapServers = $"{_settings.FullyQualifiedNamespace}:9093",
             GroupId = _settings.ConsumerGroupId,
             AutoOffsetReset = AutoOffsetReset.Earliest,
-            EnableAutoCommit = true
+            EnableAutoCommit = true,
+            SecurityProtocol = SecurityProtocol.SaslSsl,
+            SaslMechanism = SaslMechanism.Plain,
+            SaslUsername = "$ConnectionString",
+            SaslPassword = Environment.GetEnvironmentVariable("EVENTHUBS_CONNECTION_STRING") ?? string.Empty,
         };
 
-        using var consumer = new ConsumerBuilder<string, string>(config).Build();
-        consumer.Subscribe(_settings.Topics);
+        var topics = _settings.Hubs.Values.ToArray();
+        if (topics.Length == 0)
+        {
+            _logger.LogWarning("No Event Hub topics configured — EventProcessor disabled");
+            return;
+        }
 
-        _logger.LogInformation("EventProcessor started — topics: {Topics}", string.Join(", ", _settings.Topics));
+        using var consumer = new ConsumerBuilder<string, string>(config).Build();
+        consumer.Subscribe(topics);
+
+        _logger.LogInformation("EventProcessor started — topics: {Topics}, group: {GroupId}",
+            string.Join(", ", topics), _settings.ConsumerGroupId);
 
         while (!stoppingToken.IsCancellationRequested)
         {
@@ -71,21 +84,21 @@ public sealed class EventProcessorBackgroundService : BackgroundService
         }
         catch (JsonException ex)
         {
-            _logger.LogError(ex, "Malformed JSON in Kafka message, skipping");
+            _logger.LogError(ex, "Malformed JSON in Event Hubs message, skipping");
             return;
         }
 
         if (string.IsNullOrEmpty(eventType))
         {
-            _logger.LogWarning("Kafka message missing eventType, skipping");
+            _logger.LogWarning("Event Hubs message missing eventType, skipping");
             return;
         }
 
         using var scope = _serviceProvider.CreateScope();
         var handlers = scope.ServiceProvider.GetServices<IEventHandler>();
-        var handler = handlers.FirstOrDefault(h => h.EventType == eventType);
+        var handlerMap = handlers.ToDictionary(h => h.EventType, h => h, StringComparer.OrdinalIgnoreCase);
 
-        if (handler is null)
+        if (!handlerMap.TryGetValue(eventType, out var handler))
         {
             _logger.LogWarning("Unknown event type: {EventType}, skipping", eventType);
             return;

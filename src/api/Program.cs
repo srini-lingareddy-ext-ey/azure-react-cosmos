@@ -128,9 +128,7 @@ if (!string.IsNullOrEmpty(builder.Configuration["AZURE_COSMOS_ENDPOINT"]))
     // WO-48: Connector health tracker and execution engine
     builder.Services.AddScoped<Todo.Api.Infrastructure.Connectors.ConnectorHealthTracker>();
     builder.Services.AddHostedService<Todo.Api.Infrastructure.Connectors.ConnectorExecutionEngine>();
-    // WO-26: Kafka event processor + event handlers
-    builder.Services.Configure<Todo.Api.Infrastructure.EventProcessing.KafkaSettings>(
-        builder.Configuration.GetSection(Todo.Api.Infrastructure.EventProcessing.KafkaSettings.SectionName));
+    // WO-26: Event processor + event handlers (uses EventHubSettings bound above)
     builder.Services.AddScoped<Todo.Api.Infrastructure.EventProcessing.IEventHandler, Todo.Api.Infrastructure.EventProcessing.PipelineExecutionEventHandler>();
     builder.Services.AddScoped<Todo.Api.Infrastructure.EventProcessing.IEventHandler, Todo.Api.Infrastructure.EventProcessing.JobRunEventHandler>();
     builder.Services.AddScoped<Todo.Api.Infrastructure.EventProcessing.IEventHandler, Todo.Api.Infrastructure.EventProcessing.MemSQLInterfaceEventHandler>();

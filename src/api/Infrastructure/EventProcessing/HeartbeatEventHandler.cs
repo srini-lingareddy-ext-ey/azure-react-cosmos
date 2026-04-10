@@ -1,4 +1,4 @@
-﻿using System.Text.Json;
+using System.Text.Json;
 using Todo.Api.Domain.Entities;
 using Todo.Api.Domain.Repositories;
 
@@ -27,10 +27,22 @@ public sealed class HeartbeatEventHandler : IEventHandler
             ?? new ProductAvailability { Id = productId, TenantId = tenantId, ProductId = productId };
 
         product.ProductName = data.TryGetProperty("productName", out var pn) ? pn.GetString() ?? productId : productId;
-        product.LastHeartbeatAt = data.TryGetProperty("timestamp", out var ts) ? ts.GetDateTimeOffset() : DateTimeOffset.UtcNow;
-        product.UpdatedAt = DateTimeOffset.UtcNow;
+        var eventTimestamp = data.TryGetProperty("timestamp", out var ts) ? ts.GetDateTimeOffset() : DateTimeOffset.UtcNow;
+        product.LastHeartbeatAt = eventTimestamp;
 
+        var windowStart = product.HeartbeatWindowResetAt ?? DateTimeOffset.UtcNow.AddHours(-24);
+        if ((DateTimeOffset.UtcNow - windowStart).TotalHours >= 24)
+        {
+            product.HeartbeatCount24h = 1;
+            product.HeartbeatWindowResetAt = DateTimeOffset.UtcNow;
+        }
+        else
+        {
+            product.HeartbeatCount24h++;
+        }
+
+        product.UpdatedAt = DateTimeOffset.UtcNow;
         await _productRepo.UpsertAsync(product, ct).ConfigureAwait(false);
-        _logger.LogDebug("Processed heartbeat for product {ProductId}", productId);
+        _logger.LogDebug("Processed heartbeat for product {ProductId}, count={Count}", productId, product.HeartbeatCount24h);
     }
 }
