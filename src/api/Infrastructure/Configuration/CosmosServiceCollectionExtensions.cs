@@ -114,6 +114,59 @@ public static class CosmosServiceCollectionExtensions
         services.AddCosmosDbRepository<ConnectorExecutionLog>(databaseId, "connector-execution-log", "/tenantId");
         services.AddSingleton<IConnectorExecutionLogRepository, ConnectorExecutionLogRepository>();
 
+        // Phase 4: Pipeline Monitoring (WO-21)
+        services.AddCosmosDbRepository<PipelineStatusSummary>(databaseId, "pipeline-status-summary", "/tenantId");
+        services.AddSingleton<IPipelineStatusSummaryRepository, PipelineStatusSummaryRepository>();
+
+        services.AddCosmosDbRepository<PipelineExecution>(databaseId, "pipeline-execution", "/tenantId");
+        services.AddSingleton<IPipelineExecutionRepository, PipelineExecutionRepository>();
+
+        services.AddCosmosDbRepository<MemSQLInterfaceStatus>(databaseId, "memsql-interface-status", "/tenantId");
+        services.AddSingleton<IMemSQLInterfaceStatusRepository, MemSQLInterfaceStatusRepository>();
+
+        // Phase 4: Job Monitoring (WO-22) — job-run has TTL enabled
+        services.AddCosmosDbRepository<JobRun>(databaseId, "job-run", "/tenantId");
+        services.AddSingleton<IJobRunRepository, JobRunRepository>();
+
+        services.AddCosmosDbRepository<JobLongRunThreshold>(databaseId, "job-long-run-threshold", "/tenantId");
+        services.AddSingleton<IJobLongRunThresholdRepository, JobLongRunThresholdRepository>();
+
+        // Phase 4: Data Quality (WO-23)
+        services.AddCosmosDbRepository<DataQualityScore>(databaseId, "data-quality-score", "/tenantId");
+        services.AddSingleton<IDataQualityScoreRepository, DataQualityScoreRepository>();
+
+        services.AddCosmosDbRepository<DataQualityStatus>(databaseId, "data-quality-status", "/tenantId");
+        services.AddSingleton<IDataQualityStatusRepository, DataQualityStatusRepository>();
+
+        services.AddCosmosDbRepository<DataQualityThresholdConfig>(databaseId, "data-quality-threshold-config", "/tenantId");
+        services.AddSingleton<IDataQualityThresholdConfigRepository, DataQualityThresholdConfigRepository>();
+
+        // Phase 4: SLA Tracking (WO-24)
+        services.AddCosmosDbRepository<PipelineSLAConfig>(databaseId, "pipeline-sla-config", "/tenantId");
+        services.AddSingleton<IPipelineSLAConfigRepository, PipelineSLAConfigRepository>();
+
+        services.AddCosmosDbRepository<PipelineSLAStatus>(databaseId, "pipeline-sla-status", "/tenantId");
+        services.AddSingleton<IPipelineSLAStatusRepository, PipelineSLAStatusRepository>();
+
+        services.AddCosmosDbRepository<PipelineSLABreachRecord>(databaseId, "pipeline-sla-breach-record", "/tenantId");
+        services.AddSingleton<IPipelineSLABreachRecordRepository, PipelineSLABreachRecordRepository>();
+
+        // Phase 4: Infrastructure Monitoring (WO-25) — infrastructure-metric has TTL enabled
+        services.AddCosmosDbRepository<ComponentHealthStatus>(databaseId, "component-health-status", "/tenantId");
+        services.AddSingleton<IComponentHealthStatusRepository, ComponentHealthStatusRepository>();
+
+        services.AddCosmosDbRepository<NodeHealthStatus>(databaseId, "node-health-status", "/tenantId");
+        services.AddSingleton<INodeHealthStatusRepository, NodeHealthStatusRepository>();
+
+        services.AddCosmosDbRepository<InfrastructureMetric>(databaseId, "infrastructure-metric", "/tenantId");
+        services.AddSingleton<IInfrastructureMetricRepository, InfrastructureMetricRepository>();
+
+        services.AddCosmosDbRepository<InfraThresholdConfig>(databaseId, "infra-threshold-config", "/tenantId");
+        services.AddSingleton<IInfraThresholdConfigRepository, InfraThresholdConfigRepository>();
+
+        services.AddCosmosDbRepository<ProductAvailability>(databaseId, "product-availability", "/tenantId");
+        services.AddSingleton<IProductAvailabilityRepository, ProductAvailabilityRepository>();
+
         return services;
     }
 }

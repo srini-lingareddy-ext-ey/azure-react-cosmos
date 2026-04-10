@@ -38,6 +38,20 @@ const ConnectorExecutionLogViewer = lazy(
   () => import('../../features/connectors/ConnectorExecutionLogViewer')
 );
 
+/* ── Phase 4 monitoring lazy imports ── */
+const PipelineStatusPage = lazy(
+  () => import('../../features/pipelineMonitoring/PipelineStatusPage')
+);
+const DataQualityPage = lazy(
+  () => import('../../features/dataQuality/DataQualityPage')
+);
+const SLATrackingPage = lazy(
+  () => import('../../features/slaTracking/SLATrackingPage')
+);
+const InfrastructurePage = lazy(
+  () => import('../../features/infrastructureMonitoring/InfrastructurePage')
+);
+
 const LazyFallback = <Spinner label="Loading…" />;
 
 const AppRoutes: React.FC = () => {
@@ -129,6 +143,18 @@ const AppRoutes: React.FC = () => {
               </RoleGuard>
             }
           />
+
+          {/* ── Phase 4: Pipeline Monitoring ── */}
+          <Route path="/pipelines" element={<Suspense fallback={LazyFallback}><PipelineStatusPage /></Suspense>} />
+
+          {/* ── Phase 4: Data Quality ── */}
+          <Route path="/data-quality" element={<Suspense fallback={LazyFallback}><DataQualityPage /></Suspense>} />
+
+          {/* ── Phase 4: SLA Tracking ── */}
+          <Route path="/sla" element={<Suspense fallback={LazyFallback}><SLATrackingPage /></Suspense>} />
+
+          {/* ── Phase 4: Infrastructure Monitoring ── */}
+          <Route path="/infrastructure" element={<Suspense fallback={LazyFallback}><InfrastructurePage /></Suspense>} />
 
           {/* ── Wave 4: Connectors ── */}
           <Route

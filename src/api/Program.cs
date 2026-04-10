@@ -112,6 +112,37 @@ if (!string.IsNullOrEmpty(builder.Configuration["AZURE_COSMOS_ENDPOINT"]))
     builder.Services.AddSingleton<Todo.Api.Infrastructure.Connectors.IEventPublisher, Todo.Api.Infrastructure.Connectors.NoOpEventPublisher>();
     builder.Services.AddScoped<Todo.Api.Infrastructure.Connectors.ConnectorHealthTracker>();
     builder.Services.AddHostedService<Todo.Api.Infrastructure.Connectors.ConnectorExecutionEngine>();
+    // WO-26: Kafka event processor + event handlers
+    builder.Services.Configure<Todo.Api.Infrastructure.EventProcessing.KafkaSettings>(
+        builder.Configuration.GetSection(Todo.Api.Infrastructure.EventProcessing.KafkaSettings.SectionName));
+    builder.Services.AddScoped<Todo.Api.Infrastructure.EventProcessing.IEventHandler, Todo.Api.Infrastructure.EventProcessing.PipelineExecutionEventHandler>();
+    builder.Services.AddScoped<Todo.Api.Infrastructure.EventProcessing.IEventHandler, Todo.Api.Infrastructure.EventProcessing.JobRunEventHandler>();
+    builder.Services.AddScoped<Todo.Api.Infrastructure.EventProcessing.IEventHandler, Todo.Api.Infrastructure.EventProcessing.MemSQLInterfaceEventHandler>();
+    // WO-27: Quality and infrastructure event handlers
+    builder.Services.AddScoped<Todo.Api.Infrastructure.EventProcessing.IEventHandler, Todo.Api.Infrastructure.EventProcessing.DataQualityEventHandler>();
+    builder.Services.AddScoped<Todo.Api.Infrastructure.EventProcessing.IEventHandler, Todo.Api.Infrastructure.EventProcessing.InfrastructureMetricEventHandler>();
+    builder.Services.AddHostedService<Todo.Api.Infrastructure.EventProcessing.EventProcessorBackgroundService>();
+    // WO-28: SLA Evaluation Job
+    builder.Services.AddScoped<ISLAEvaluationService, SLAEvaluationService>();
+    builder.Services.AddHostedService<Todo.Api.Infrastructure.BackgroundJobs.SLAEvaluationJob>();
+    // WO-29: Data Quality Evaluation Job
+    builder.Services.AddScoped<IDataQualityEvaluationService, DataQualityEvaluationService>();
+    builder.Services.AddHostedService<Todo.Api.Infrastructure.BackgroundJobs.DataQualityEvaluationJob>();
+    // WO-30: Infrastructure Health Evaluation + Long-Run Threshold Jobs
+    builder.Services.AddScoped<IInfraHealthEvaluationService, InfraHealthEvaluationService>();
+    builder.Services.AddHostedService<Todo.Api.Infrastructure.BackgroundJobs.InfraHealthEvaluationJob>();
+    builder.Services.AddHostedService<Todo.Api.Infrastructure.BackgroundJobs.LongRunThresholdJob>();
+    builder.Services.AddScoped<Todo.Api.Infrastructure.EventProcessing.IEventHandler, Todo.Api.Infrastructure.EventProcessing.HeartbeatEventHandler>();
+    // WO-31: Pipeline Monitoring API
+    builder.Services.AddScoped<IPipelineMonitoringService, PipelineMonitoringService>();
+    // WO-32: Job Execution Monitoring API
+    builder.Services.AddScoped<IJobMonitoringService, JobMonitoringService>();
+    // WO-33: Data Quality and Latency API
+    builder.Services.AddScoped<IDataQualityService, DataQualityService>();
+    // WO-34: SLA Tracking API
+    builder.Services.AddScoped<ISLAService, SLAService>();
+    // WO-35: Infrastructure Monitoring API
+    builder.Services.AddScoped<IInfrastructureMonitoringService, InfrastructureMonitoringService>();
 }
 else
 {

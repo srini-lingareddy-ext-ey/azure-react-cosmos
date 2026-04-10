@@ -25,6 +25,9 @@ public interface IRepository<T> where T : class, IDomainEntity
     /// <exception cref="ConcurrencyConflictException">Thrown when <paramref name="etag"/> was supplied and the stored document was modified since (ETag conflict).</exception>
     Task DeleteAsync(string id, object partitionKeyValue, string? etag = null, CancellationToken cancellationToken = default);
 
+    /// <summary>Creates or replaces the entity (Cosmos DB upsert). Audit fields are set by the repository.</summary>
+    Task<T> UpsertAsync(T entity, CancellationToken cancellationToken = default);
+
     /// <summary>Executes a query and returns matching items. Query text and parameter names are defined by the implementation (e.g. Cosmos SQL with @params).</summary>
     IAsyncEnumerable<T> QueryAsync(QuerySpec spec, CancellationToken cancellationToken = default);
 }

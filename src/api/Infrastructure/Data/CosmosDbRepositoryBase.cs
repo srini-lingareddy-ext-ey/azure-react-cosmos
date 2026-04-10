@@ -94,6 +94,21 @@ public sealed class CosmosDbRepositoryBase<T> : IRepository<T> where T : class, 
     }
 
     /// <inheritdoc />
+    public async Task<T> UpsertAsync(T entity, CancellationToken cancellationToken = default)
+    {
+        PopulateAuditOnUpdate(entity);
+        if (entity is IAuditableEntity auditable && auditable.CreatedAt is null)
+            PopulateAuditOnCreate(entity);
+        var response = await _container.UpsertItemAsync(
+            entity,
+            ToPartitionKey(entity.PartitionKeyValue),
+            cancellationToken: cancellationToken).ConfigureAwait(false);
+        LogRequestCharge("Upsert", response.RequestCharge);
+        SetEtagFromResponse(entity, response.ETag);
+        return response.Resource;
+    }
+
+    /// <inheritdoc />
     /// <exception cref="ConcurrencyConflictException">Thrown when <paramref name="etag"/> is supplied and no longer matches the stored document (Cosmos 412 Precondition Failed).</exception>
     public async Task DeleteAsync(string id, object partitionKeyValue, string? etag = null, CancellationToken cancellationToken = default)
     {
