@@ -1,0 +1,10 @@
+﻿import { apiClient } from '../../services/apiClient';
+import type { ConnectorListResponse, ConnectorResponse, ConnectorTestResponse, ConnectorLogResponse, ConnectorTypeCatalogEntry, CreateConnectorRequest } from './connectorTypes';
+const BASE = '/api/v1/connectors';
+export const getCatalog = async (): Promise<ConnectorTypeCatalogEntry[]> => (await apiClient.get<ConnectorTypeCatalogEntry[]>(`${BASE}/catalog`)).data;
+export const listConnectors = async (): Promise<ConnectorListResponse> => (await apiClient.get<ConnectorListResponse>(BASE)).data;
+export const createConnector = async (b: CreateConnectorRequest): Promise<ConnectorResponse> => (await apiClient.post<ConnectorResponse>(BASE, b)).data;
+export const enableConnector = async (id: string): Promise<ConnectorResponse> => (await apiClient.post<ConnectorResponse>(`${BASE}/${id}/enable`)).data;
+export const disableConnector = async (id: string): Promise<ConnectorResponse> => (await apiClient.post<ConnectorResponse>(`${BASE}/${id}/disable`)).data;
+export const testConnector = async (id: string): Promise<ConnectorTestResponse> => (await apiClient.post<ConnectorTestResponse>(`${BASE}/${id}/test`)).data;
+export const getConnectorLogs = async (id: string): Promise<ConnectorLogResponse> => (await apiClient.get<ConnectorLogResponse>(`${BASE}/${id}/logs`)).data;

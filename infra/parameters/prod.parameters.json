@@ -8,6 +8,8 @@
     "useAPIM": { "value": true },
     "apimSku": { "value": "Consumption" },
     "appServicePlanSku": { "value": { "name": "P1v2", "tier": "PremiumV2", "capacity": 1 } },
-    "redisSku": { "value": "Standard" }
+    "redisSku": { "value": "Standard" },
+    "eventHubsPartitionCount": { "value": 4 },
+    "eventHubsMessageRetentionDays": { "value": 7 }
   }
 }

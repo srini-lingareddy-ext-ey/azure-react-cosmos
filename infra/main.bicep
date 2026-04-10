@@ -27,6 +27,15 @@ param webAppServiceName string = ''
 param redisName string = ''
 param apimServiceName string = ''
 
+@description('Event Hubs namespace name override.')
+param eventHubsNamespaceName string = ''
+
+@description('Partition count per event hub. 4 for prod, 2 for dev/staging.')
+param eventHubsPartitionCount int = 4
+
+@description('Event hub message retention in days. 1 for dev, 7 for staging/prod.')
+param eventHubsMessageRetentionDays int = 7
+
 @description('Use Azure API Management to mediate calls between frontend and backend API.')
 param useAPIM bool = false
 
@@ -128,6 +137,21 @@ module appService './modules/app-service.bicep' = {
   }
 }
 
+// WO-41: Azure Event Hubs (Standard tier, Kafka enabled) — 4 event hubs with RBAC for API managed identity
+module eventHubs './modules/event-hubs.bicep' = {
+  name: 'event-hubs'
+  scope: rg
+  params: {
+    environmentName: environmentName
+    location: location
+    tags: tags
+    eventHubsNamespaceName: !empty(eventHubsNamespaceName) ? eventHubsNamespaceName : ''
+    apiPrincipalId: appService.outputs.principalId
+    partitionCount: eventHubsPartitionCount
+    messageRetentionDays: eventHubsMessageRetentionDays
+  }
+}
+
 // Cosmos DB Built-in Data Contributor for API managed identity
 module apiCosmosRole './app/cosmos-role-assignment.bicep' = {
   name: 'api-cosmos-role'
@@ -176,3 +200,4 @@ output USE_APIM bool = useAPIM
 output SERVICE_API_ENDPOINTS array = useAPIM ? [ apim!.outputs.gatewayUrl, 'https://${appService.outputs.defaultHostname}' ] : []
 output REDIS_HOST string = redis.outputs.hostName
 output REDIS_PORT int = redis.outputs.sslPort
+output EVENT_HUBS_NAMESPACE string = eventHubs.outputs.fullyQualifiedNamespace

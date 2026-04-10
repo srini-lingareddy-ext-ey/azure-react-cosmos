@@ -79,6 +79,39 @@ if (!string.IsNullOrEmpty(builder.Configuration["AZURE_COSMOS_ENDPOINT"]))
     builder.Services.AddScoped<IAuthService, AuthService>();
     builder.Services.AddScoped<ITenantService, TenantService>();
     builder.Services.AddScoped<IUserManagementService, UserManagementService>();
+    // WO-42: Business Plan CRUD API
+    builder.Services.AddScoped<IBusinessPlanService, BusinessPlanService>();
+    // WO-45: Connection CRUD and Test API
+    builder.Services.AddScoped<IConnectionService, ConnectionService>();
+    // WO-43: Pipeline Registration CRUD API
+    builder.Services.AddScoped<IPipelineRegistrationService, PipelineRegistrationService>();
+    // WO-44: Pipeline Lineage Relationship API
+    builder.Services.AddScoped<ILineageService, LineageService>();
+    // WO-46: Monitor CRUD API
+    builder.Services.AddScoped<IMonitorService, MonitorService>();
+    // WO-46: Query Template CRUD API
+    builder.Services.AddScoped<IQueryTemplateService, QueryTemplateService>();
+    // WO-47: Connector CRUD API
+    builder.Services.AddSingleton<Todo.Api.Application.Connectors.ConnectorTypeCatalog>();
+    builder.Services.AddScoped<IConnectorService, ConnectorService>();
+    // WO-48: Connector adapters (all 13 stubs)
+    builder.Services.AddScoped<Todo.Api.Application.Connectors.IConnectorAdapter, Todo.Api.Infrastructure.Connectors.Adapters.AirflowAdapter>();
+    builder.Services.AddScoped<Todo.Api.Application.Connectors.IConnectorAdapter, Todo.Api.Infrastructure.Connectors.Adapters.TalendAdapter>();
+    builder.Services.AddScoped<Todo.Api.Application.Connectors.IConnectorAdapter, Todo.Api.Infrastructure.Connectors.Adapters.HvrAdapter>();
+    builder.Services.AddScoped<Todo.Api.Application.Connectors.IConnectorAdapter, Todo.Api.Infrastructure.Connectors.Adapters.MemSqlAdapter>();
+    builder.Services.AddScoped<Todo.Api.Application.Connectors.IConnectorAdapter, Todo.Api.Infrastructure.Connectors.Adapters.ServiceNowAdapter>();
+    builder.Services.AddScoped<Todo.Api.Application.Connectors.IConnectorAdapter, Todo.Api.Infrastructure.Connectors.Adapters.DatadogAdapter>();
+    builder.Services.AddScoped<Todo.Api.Application.Connectors.IConnectorAdapter, Todo.Api.Infrastructure.Connectors.Adapters.NewRelicAdapter>();
+    builder.Services.AddScoped<Todo.Api.Application.Connectors.IConnectorAdapter, Todo.Api.Infrastructure.Connectors.Adapters.DynatraceAdapter>();
+    builder.Services.AddScoped<Todo.Api.Application.Connectors.IConnectorAdapter, Todo.Api.Infrastructure.Connectors.Adapters.PostgreSqlAdapter>();
+    builder.Services.AddScoped<Todo.Api.Application.Connectors.IConnectorAdapter, Todo.Api.Infrastructure.Connectors.Adapters.OracleAdapter>();
+    builder.Services.AddScoped<Todo.Api.Application.Connectors.IConnectorAdapter, Todo.Api.Infrastructure.Connectors.Adapters.SqlServerAdapter>();
+    builder.Services.AddScoped<Todo.Api.Application.Connectors.IConnectorAdapter, Todo.Api.Infrastructure.Connectors.Adapters.AzureSynapseAdapter>();
+    builder.Services.AddScoped<Todo.Api.Application.Connectors.IConnectorAdapter, Todo.Api.Infrastructure.Connectors.Adapters.CustomWebhookAdapter>();
+    // WO-48: Event publisher and execution engine
+    builder.Services.AddSingleton<Todo.Api.Infrastructure.Connectors.IEventPublisher, Todo.Api.Infrastructure.Connectors.NoOpEventPublisher>();
+    builder.Services.AddScoped<Todo.Api.Infrastructure.Connectors.ConnectorHealthTracker>();
+    builder.Services.AddHostedService<Todo.Api.Infrastructure.Connectors.ConnectorExecutionEngine>();
 }
 else
 {
