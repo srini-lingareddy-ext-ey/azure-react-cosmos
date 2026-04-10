@@ -45,6 +45,12 @@ if (!builder.Environment.IsDevelopment())
     }
 }
 
+// WO-17: Credential encryption (AES-256-GCM with per-tenant HKDF key derivation)
+builder.Services.Configure<Todo.Api.Infrastructure.Security.CredentialEncryptionOptions>(
+    builder.Configuration.GetSection(Todo.Api.Infrastructure.Security.CredentialEncryptionOptions.SectionName));
+builder.Services.AddSingleton<Todo.Api.Application.Services.ICredentialEncryptionService,
+    Todo.Api.Infrastructure.Security.CredentialEncryptionService>();
+
 // Application services: register domain use cases here as they are introduced.
 
 // AC-FOUNDATION-003: JWT bearer authentication with Microsoft Entra ID; 401/403 standardized responses; Admin role policy

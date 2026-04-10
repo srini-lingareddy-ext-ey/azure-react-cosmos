@@ -7,6 +7,7 @@ using Microsoft.Extensions.Logging;
 using Todo.Api.Domain.Entities;
 using Todo.Api.Domain.Repositories;
 using Todo.Api.Infrastructure.Data;
+using Monitor = Todo.Api.Domain.Entities.Monitor;
 
 namespace Todo.Api.Infrastructure.Configuration;
 
@@ -81,6 +82,38 @@ public static class CosmosServiceCollectionExtensions
 
         services.AddCosmosDbRepository<UserInvitation>(databaseId, "user-invitation", "/tenantId");
         services.AddSingleton<IUserInvitationRepository, UserInvitationRepository>();
+
+        // Phase 3: domain entity repositories (WO-15 through WO-20)
+        services.AddCosmosDbRepository<BusinessPlan>(databaseId, "business-plan", "/tenantId");
+        services.AddSingleton<IBusinessPlanRepository, BusinessPlanRepository>();
+
+        services.AddCosmosDbRepository<PipelineRegistration>(databaseId, "pipeline-registration", "/tenantId");
+        services.AddSingleton<IPipelineRegistrationRepository, PipelineRegistrationRepository>();
+
+        services.AddCosmosDbRepository<PipelineLineageRelationship>(databaseId, "pipeline-lineage-relationship", "/tenantId");
+        services.AddSingleton<IPipelineLineageRepository, PipelineLineageRepository>();
+
+        services.AddCosmosDbRepository<Connection>(databaseId, "connection", "/tenantId");
+        services.AddSingleton<IConnectionRepository, ConnectionRepository>();
+
+        services.AddCosmosDbRepository<QueryTemplate>(databaseId, "query-template", "/tenantId");
+        services.AddSingleton<IQueryTemplateRepository, QueryTemplateRepository>();
+
+        services.AddCosmosDbRepository<Monitor>(databaseId, "monitor", "/tenantId");
+        services.AddSingleton<IMonitorRepository, MonitorRepository>();
+
+        services.AddCosmosDbRepository<MonitorStatus>(databaseId, "monitor-status", "/tenantId");
+        services.AddSingleton<IMonitorStatusRepository, MonitorStatusRepository>();
+
+        services.AddCosmosDbRepository<ConnectorInstance>(databaseId, "connector-instance", "/tenantId");
+        services.AddSingleton<IConnectorInstanceRepository, ConnectorInstanceRepository>();
+
+        services.AddCosmosDbRepository<ConnectorHealthStatus>(databaseId, "connector-health-status", "/tenantId");
+        services.AddSingleton<IConnectorHealthStatusRepository, ConnectorHealthStatusRepository>();
+
+        services.AddCosmosDbRepository<ConnectorExecutionLog>(databaseId, "connector-execution-log", "/tenantId");
+        services.AddSingleton<IConnectorExecutionLogRepository, ConnectorExecutionLogRepository>();
+
         return services;
     }
 }
