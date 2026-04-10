@@ -45,6 +45,7 @@ public sealed class IncidentDetailDto
     public string TriggeringEventId { get; set; } = string.Empty;
     public int RecurrenceCount { get; set; }
     public string? ResolutionNote { get; set; }
+    public bool LineageAnalysisAvailable { get; set; }
     public ServiceNowPanel ServiceNow { get; set; } = new();
     public List<StateHistoryDto> StateHistory { get; set; } = new();
     public List<IncidentNoteDto> Notes { get; set; } = new();

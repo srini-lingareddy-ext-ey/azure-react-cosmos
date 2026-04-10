@@ -13,13 +13,13 @@ public sealed class IncidentQueryService : IIncidentQueryService
     public IncidentQueryService(IIncidentRepository incidentRepo, ILogger<IncidentQueryService> logger)
     { _incidentRepo = incidentRepo; _logger = logger; }
 
-    public async Task<IncidentListResponse> GetIncidentsAsync(string tenantId, string? state, string? severity, int page, int pageSize, CancellationToken cancellationToken = default)
+    public async Task<IncidentListResponse> GetIncidentsAsync(string tenantId, string? state, string? severity, DateTimeOffset? from, DateTimeOffset? to, string? sort, string? order, int limit, int offset, CancellationToken cancellationToken = default)
     {
-        var totalCount = await _incidentRepo.CountByTenantAsync(tenantId, severity, state, null, null, cancellationToken).ConfigureAwait(false);
+        var totalCount = await _incidentRepo.CountByTenantAsync(tenantId, severity, state, from, to, cancellationToken).ConfigureAwait(false);
         var items = new List<IncidentListEntry>();
-        await foreach (var inc in _incidentRepo.GetByTenantAsync(tenantId, severity, state, null, null, "createdAt", "desc", pageSize, (page - 1) * pageSize, cancellationToken).ConfigureAwait(false))
+        await foreach (var inc in _incidentRepo.GetByTenantAsync(tenantId, severity, state, from, to, sort ?? "createdAt", order ?? "desc", limit, offset, cancellationToken).ConfigureAwait(false))
             items.Add(MapToListEntry(inc));
-        return new IncidentListResponse { Items = items, Pagination = new PaginationInfo { Page = page, PageSize = pageSize, TotalCount = totalCount } };
+        return new IncidentListResponse { Items = items, Pagination = new PaginationInfo { Page = offset / Math.Max(limit, 1) + 1, PageSize = limit, TotalCount = totalCount } };
     }
 
     public async Task<IncidentDetailDto> GetIncidentByIdAsync(string id, string tenantId, CancellationToken cancellationToken = default)
@@ -43,6 +43,7 @@ public sealed class IncidentQueryService : IIncidentQueryService
         MonitorId = inc.MonitorId, MonitorName = inc.MonitorName, BusinessPlan = inc.BusinessPlan,
         AffectedPipelineId = inc.AffectedPipelineId, TriggeringEventId = inc.TriggeringEventId,
         RecurrenceCount = inc.RecurrenceCount, ResolutionNote = inc.ResolutionNote,
+        LineageAnalysisAvailable = !string.IsNullOrEmpty(inc.AffectedPipelineId),
         ServiceNow = new ServiceNowPanel { TicketCreationStatus = inc.TicketCreationStatus.ToString(), TicketCreationRetries = inc.TicketCreationRetries, TicketNumber = inc.ServiceNowTicketNumber, TicketUrl = inc.ServiceNowTicketUrl, TicketStatus = inc.ServiceNowTicketStatus, LastSyncedAt = inc.LastSyncedAt },
         StateHistory = inc.StateHistory.Select(h => new StateHistoryDto { FromState = h.FromState, ToState = h.ToState, Actor = h.Actor, Timestamp = h.Timestamp, Note = h.Note }).ToList(),
         Notes = inc.Notes.Select(n => new IncidentNoteDto { NoteId = n.NoteId, Content = n.Content, AuthorId = n.AuthorId, AuthorName = n.AuthorName, CreatedAt = n.CreatedAt, SyncedToServiceNow = n.SyncedToServiceNow }).ToList(),

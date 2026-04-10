@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useCallback } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useIncidentList } from './hooks/useIncidents';
 import { IncidentFilterBar } from './IncidentFilterBar';
 import type { IncidentFilters } from './incidentService';
@@ -10,7 +10,23 @@ const severityColor: Record<string, string> = {
 
 const IncidentListPage: React.FC = () => {
   const navigate = useNavigate();
-  const [filters, setFilters] = useState<IncidentFilters>({ limit: 50, offset: 0, sort: 'createdAt', order: 'desc' });
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [filters, setFiltersState] = useState<IncidentFilters>(() => ({
+    severity: searchParams.get('severity') || undefined,
+    state: searchParams.get('state') || undefined,
+    from: searchParams.get('from') || undefined,
+    to: searchParams.get('to') || undefined,
+    limit: 50, offset: 0, sort: 'createdAt', order: 'desc',
+  }));
+  const setFilters = useCallback((f: IncidentFilters) => {
+    setFiltersState(f);
+    const params = new URLSearchParams();
+    if (f.severity) params.set('severity', f.severity);
+    if (f.state) params.set('state', f.state);
+    if (f.from) params.set('from', f.from);
+    if (f.to) params.set('to', f.to);
+    setSearchParams(params, { replace: true });
+  }, [setSearchParams]);
   const { data, isLoading, isError, refetch } = useIncidentList(filters);
 
   if (isError) return <div style={{ padding: 24 }}><p>Failed to load incidents.</p><button onClick={() => refetch()}>Retry</button></div>;

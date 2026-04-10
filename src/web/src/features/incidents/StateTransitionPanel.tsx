@@ -1,18 +1,23 @@
 import React, { useState } from 'react';
 import { useTransitionState } from './hooks/useIncidents';
+import { useAuth } from '../../auth/useAuth';
 import type { IncidentDetail } from './incidentService';
 
 const transitions: Record<string, string[]> = {
   Open: ['InProgress'], InProgress: ['Resolved'], Resolved: ['Closed'], Closed: [],
 };
 
+const canTransition = (role: string | null | undefined): boolean =>
+  !!role && ['Operator', 'Admin', 'PlatformAdmin'].includes(role);
+
 export const StateTransitionPanel: React.FC<{ incident: IncidentDetail }> = ({ incident }) => {
+  const { activeRole } = useAuth();
   const mutation = useTransitionState();
   const [note, setNote] = useState('');
   const [showResolve, setShowResolve] = useState(false);
   const validNext = transitions[incident.state] || [];
 
-  if (!validNext.length) return null;
+  if (!validNext.length || !canTransition(activeRole)) return null;
 
   const handleTransition = (toState: string) => {
     if (toState === 'Resolved') { setShowResolve(true); return; }
