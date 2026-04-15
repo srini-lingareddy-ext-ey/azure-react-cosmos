@@ -1,7 +1,6 @@
 ---
-description: Global engineering, work order, testing, build, and git/pre-commit rules (8090 WO authority)
-globs: "**/*.{py,ts,tsx,go,md}"
-alwaysApply: false
+description: Global engineering, work order, testing, build, and git/pre-commit rules (8090 WO authority). Applies to all project files.
+alwaysApply: true
 ---
 
 # Engineering & Execution Rules
@@ -55,8 +54,10 @@ A Work Order is **not** complete until **all** of the following are true:
 ## Build & correctness
 
 - Code **must** compile and type-check cleanly.
-- **Python:** mypy / pyright clean.
-- **TypeScript:** strict `tsc` clean.
+- **C# / .NET:** `dotnet build` (and test projects) succeed; treat analyzer warnings per team policy; nullable reference types as configured.
+- **Python:** mypy / pyright clean (when Python is in scope).
+- **TypeScript:** strict `tsc` clean for frontend packages.
+- **Infrastructure:** Bicep/ARM templates must be valid where the pipeline validates them.
 - Never emit code that cannot run.
 - Never access private/protected members outside their owning class/module.
 - Never bypass encapsulation “because it works”.

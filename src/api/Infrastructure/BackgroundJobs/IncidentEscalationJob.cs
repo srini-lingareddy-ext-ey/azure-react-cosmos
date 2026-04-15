@@ -7,13 +7,7 @@ namespace Todo.Api.Infrastructure.BackgroundJobs;
 /// <summary>WO-68: escalates open incidents if threshold exceeded (5-min cycle).</summary>
 public sealed class IncidentEscalationJob : BackgroundService
 {
-    private static readonly Dictionary<IncidentSeverity, int> DefaultThresholdMinutes = new()
-    {
-        [IncidentSeverity.Low] = 120,
-        [IncidentSeverity.Medium] = 60,
-        [IncidentSeverity.High] = 30,
-        [IncidentSeverity.Critical] = int.MaxValue,
-    };
+    private static readonly TimeSpan EscalationThreshold = TimeSpan.FromHours(4);
     private static readonly Dictionary<IncidentSeverity, IncidentSeverity> EscalationMap = new()
     {
         [IncidentSeverity.Low] = IncidentSeverity.Medium,
@@ -54,21 +48,15 @@ public sealed class IncidentEscalationJob : BackgroundService
             {
                 if (incident.State != IncidentState.Open) continue;
                 if (!incident.CreatedAt.HasValue) continue;
+                if ((DateTimeOffset.UtcNow - incident.CreatedAt.Value) < EscalationThreshold) continue;
                 if (incident.Severity == IncidentSeverity.Critical) continue;
                 if (!EscalationMap.TryGetValue(incident.Severity, out var newSeverity)) continue;
-
-                var thresholdMinutes = DefaultThresholdMinutes.GetValueOrDefault(incident.Severity, 60);
-                if ((DateTimeOffset.UtcNow - incident.CreatedAt.Value).TotalMinutes < thresholdMinutes) continue;
-
-                // Skip if already escalated at this severity level
-                var alreadyEscalated = incident.StateHistory.Any(h => h.Actor == "system:escalation" && (h.Note?.Contains($"to {newSeverity}") ?? false));
-                if (alreadyEscalated) continue;
 
                 var oldSeverity = incident.Severity;
                 incident.Severity = newSeverity;
                 incident.UpdatedAt = DateTimeOffset.UtcNow;
                 incident.UpdatedBy = "system:escalation";
-                incident.StateHistory.Add(new StateHistoryEntry { FromState = incident.State.ToString(), ToState = incident.State.ToString(), Actor = "system:escalation", Timestamp = DateTimeOffset.UtcNow, Note = $"Auto-escalated severity from {oldSeverity} to {newSeverity} (threshold: {thresholdMinutes}min)" });
+                incident.StateHistory.Add(new StateHistoryEntry { FromState = incident.State.ToString(), ToState = incident.State.ToString(), Actor = "system:escalation", Timestamp = DateTimeOffset.UtcNow, Note = $"Auto-escalated severity from {oldSeverity} to {newSeverity} (threshold: {EscalationThreshold.TotalHours}h)" });
                 await incidentRepo.UpdateAsync(incident, ct).ConfigureAwait(false);
                 _logger.LogInformation("Escalated incident {IncidentId} from {Old} to {New}", incident.Id, oldSeverity, newSeverity);
                 try { await notificationService.DeliverEscalationAsync(incident.Id, tenant.Id, ct).ConfigureAwait(false); }

@@ -28,6 +28,7 @@ var hubNames = [
   'job-events'
   'quality-events'
   'infrastructure-events'
+  'lineage-analysis-requests'
 ]
 
 // Azure Event Hubs Data Sender: 2b629674-e913-4c01-ae53-ef4638d8f975

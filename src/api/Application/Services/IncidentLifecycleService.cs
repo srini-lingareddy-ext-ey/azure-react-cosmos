@@ -25,13 +25,10 @@ public sealed class IncidentLifecycleService : IIncidentLifecycleService
     public IncidentLifecycleService(IIncidentRepository incidentRepo, IServiceNowConfigRepository snConfigRepo, IServiceNowClient snClient, ILogger<IncidentLifecycleService> logger)
     { _incidentRepo = incidentRepo; _snConfigRepo = snConfigRepo; _snClient = snClient; _logger = logger; }
 
-    public async Task<StateTransitionResponse> TransitionStateAsync(string incidentId, string tenantId, string userId, StateTransitionRequest request, string? etag = null, CancellationToken cancellationToken = default)
+    public async Task<StateTransitionResponse> TransitionStateAsync(string incidentId, string tenantId, string userId, StateTransitionRequest request, CancellationToken cancellationToken = default)
     {
         var incident = await _incidentRepo.GetByIdAsync(incidentId, tenantId, cancellationToken).ConfigureAwait(false)
             ?? throw new KeyNotFoundException($"Incident {incidentId} not found.");
-
-        if (incident.State == IncidentState.Closed)
-            throw new InvalidOperationException("Closed incidents are immutable.");
 
         if (!Enum.TryParse<IncidentState>(request.ToState, true, out var target))
             throw new ArgumentException($"Invalid target state: {request.ToState}");
@@ -42,9 +39,6 @@ public sealed class IncidentLifecycleService : IIncidentLifecycleService
         if (target == IncidentState.Resolved && string.IsNullOrWhiteSpace(request.ResolutionNote))
             throw new ArgumentException("ResolutionNote is required when resolving an incident.");
 
-        // Apply client-supplied ETag for optimistic concurrency
-        if (!string.IsNullOrEmpty(etag)) incident.Etag = etag;
-
         var fromState = incident.State.ToString();
         incident.State = target;
         incident.UpdatedAt = DateTimeOffset.UtcNow;
@@ -53,22 +47,10 @@ public sealed class IncidentLifecycleService : IIncidentLifecycleService
 
         incident.StateHistory.Add(new StateHistoryEntry { FromState = fromState, ToState = target.ToString(), Actor = userId, Timestamp = DateTimeOffset.UtcNow, Note = request.ResolutionNote });
 
-        await _incidentRepo.UpdateAsync(incident, cancellationToken).ConfigureAwait(false);
+        try { await _incidentRepo.UpdateAsync(incident, cancellationToken).ConfigureAwait(false); }
+        catch (ConcurrencyConflictException) { throw; }
 
         _logger.LogInformation("Incident {IncidentId} transitioned {From} -> {To} by {User}", incidentId, fromState, target, userId);
-
-        // Best-effort outbound ServiceNow sync (failure does not fail the transition)
-        if (!string.IsNullOrEmpty(incident.ServiceNowTicketNumber))
-        {
-            try
-            {
-                var config = await _snConfigRepo.GetByTenantIdAsync(tenantId, cancellationToken).ConfigureAwait(false);
-                var snState = config?.StateMapping?.TryGetValue(target.ToString(), out var mapped) == true ? mapped : target.ToString();
-                await _snClient.UpdateTicketStateAsync(incident.ServiceNowTicketNumber, snState, cancellationToken).ConfigureAwait(false);
-            }
-            catch (Exception ex) { _logger.LogWarning(ex, "Outbound ServiceNow sync failed for incident {IncidentId} (non-blocking)", incidentId); }
-        }
-
         return new StateTransitionResponse(incident.State.ToString(), incident.Etag ?? string.Empty);
     }
 

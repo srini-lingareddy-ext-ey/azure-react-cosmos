@@ -44,6 +44,7 @@ public sealed class IncidentRecord : IDomainEntity, IConcurrencyEntity, IAuditab
     public string? ServiceNowTicketStatus { get; set; }
     public DateTimeOffset? LastSyncedAt { get; set; }
     public List<StateHistoryEntry> StateHistory { get; set; } = new();
+    public bool LineageAnalysisAvailable { get; set; }
     public List<IncidentNote> Notes { get; set; } = new();
     public int SchemaVersion { get; set; } = 1;
     public string? Etag { get; set; }

@@ -216,6 +216,26 @@ public static class CosmosServiceCollectionExtensions
         services.AddCosmosDbRepository<NotificationTemplate>(databaseId, "notification-template", "/tenantId");
         services.AddSingleton<INotificationTemplateRepository, NotificationTemplateRepository>();
 
+        // Phase 7: Health Score and Dashboard Summary (WO-76)
+        services.AddCosmosDbRepository<HealthScore>(databaseId, "health-score", "/tenantId");
+        services.AddSingleton<IHealthScoreRepository, HealthScoreRepository>();
+
+        services.AddCosmosDbRepository<DimensionSnapshot>(databaseId, "dimension-snapshot", "/tenantId");
+        services.AddSingleton<IDimensionSnapshotRepository, DimensionSnapshotRepository>();
+
+        services.AddCosmosDbRepository<DashboardSummary>(databaseId, "dashboard-summary", "/tenantId");
+        services.AddSingleton<IDashboardSummaryRepository, DashboardSummaryRepository>();
+
+        // Phase 7: Lineage Impact Analysis (WO-77)
+        services.AddCosmosDbRepository<LineageNode>(databaseId, "lineage-node", "/tenantId");
+        services.AddSingleton<ILineageNodeRepository, LineageNodeRepository>();
+
+        services.AddCosmosDbRepository<ImpactAnalysisResult>(databaseId, "impact-analysis-result", "/tenantId");
+        services.AddSingleton<IImpactAnalysisRepository, ImpactAnalysisRepository>();
+
+        services.AddCosmosDbRepository<LineageRefreshStatus>(databaseId, "lineage-refresh-status", "/tenantId");
+        services.AddSingleton<ILineageRefreshStatusRepository, LineageRefreshStatusRepository>();
+
         return services;
     }
 }

@@ -191,6 +191,17 @@ if (!string.IsNullOrEmpty(builder.Configuration["AZURE_COSMOS_ENDPOINT"]))
     builder.Services.AddScoped<IIncidentQueryService, IncidentQueryService>();
     // WO-71: Notifications config API
     builder.Services.AddScoped<INotificationsConfigService, NotificationsConfigService>();
+    // WO-84: Key events timeline API
+    builder.Services.AddScoped<IKeyEventsService, KeyEventsService>();
+    // WO-81: Lineage Analysis Worker
+    builder.Services.AddScoped<ILineageTraversalService, LineageTraversalService>();
+    builder.Services.AddScoped<Todo.Api.Infrastructure.EventProcessing.IEventHandler, Todo.Api.Infrastructure.EventProcessing.LineageAnalysisEventHandler>();
+    // WO-78: Health Score Calculation Job
+    builder.Services.AddHostedService<Todo.Api.Infrastructure.BackgroundJobs.HealthScoreCalculationJob>();
+    // WO-79: Dashboard KPI Aggregation Job
+    builder.Services.AddHostedService<Todo.Api.Infrastructure.BackgroundJobs.DashboardKpiAggregationJob>();
+    // WO-80: Lineage Refresh Job
+    builder.Services.AddHostedService<Todo.Api.Infrastructure.BackgroundJobs.LineageRefreshJob>();
 }
 else
 {

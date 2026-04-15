@@ -23,8 +23,8 @@ public sealed class IncidentsController : ControllerBase
 
     [HttpGet]
     [ProducesResponseType(typeof(IncidentListResponse), StatusCodes.Status200OK)]
-    public async Task<ActionResult<IncidentListResponse>> ListAsync([FromQuery] string? state, [FromQuery] string? severity, [FromQuery] DateTimeOffset? from, [FromQuery] DateTimeOffset? to, [FromQuery] string? sort, [FromQuery] string? order, [FromQuery] int limit = 50, [FromQuery] int offset = 0, CancellationToken cancellationToken = default)
-    { return Ok(await _queryService.GetIncidentsAsync(_tenantContext.TenantId, state, severity, from, to, sort, order, limit, offset, cancellationToken).ConfigureAwait(false)); }
+    public async Task<ActionResult<IncidentListResponse>> ListAsync([FromQuery] string? state, [FromQuery] string? severity, [FromQuery] int page = 1, [FromQuery] int pageSize = 25, CancellationToken cancellationToken = default)
+    { return Ok(await _queryService.GetIncidentsAsync(_tenantContext.TenantId, state, severity, page, pageSize, cancellationToken).ConfigureAwait(false)); }
 
     [HttpGet("{id}")]
     [ProducesResponseType(typeof(IncidentDetailDto), StatusCodes.Status200OK)]
@@ -32,23 +32,19 @@ public sealed class IncidentsController : ControllerBase
     { return Ok(await _queryService.GetIncidentByIdAsync(id, _tenantContext.TenantId, cancellationToken).ConfigureAwait(false)); }
 
     [HttpPatch("{id}/state")]
-    [Authorize(Roles = "Operator,Admin,PlatformAdmin")]
     [ProducesResponseType(typeof(StateTransitionResponse), StatusCodes.Status200OK)]
     public async Task<ActionResult<StateTransitionResponse>> TransitionStateAsync([FromRoute] string id, [FromBody] StateTransitionRequest request, CancellationToken cancellationToken = default)
     {
         var userId = _currentUser.UserId ?? string.Empty;
-        var etag = Request.Headers.IfMatch.FirstOrDefault();
-        return Ok(await _lifecycleService.TransitionStateAsync(id, _tenantContext.TenantId, userId, request, etag, cancellationToken).ConfigureAwait(false));
+        return Ok(await _lifecycleService.TransitionStateAsync(id, _tenantContext.TenantId, userId, request, cancellationToken).ConfigureAwait(false));
     }
 
     [HttpPost("{id}/notes")]
-    [Authorize(Roles = "Operator,Admin,PlatformAdmin")]
     [ProducesResponseType(typeof(AddNoteResponse), StatusCodes.Status201Created)]
     public async Task<ActionResult<AddNoteResponse>> AddNoteAsync([FromRoute] string id, [FromBody] AddNoteRequest request, CancellationToken cancellationToken = default)
     {
         var userId = _currentUser.UserId ?? string.Empty;
-        var userName = userId;
-        var result = await _lifecycleService.AddNoteAsync(id, _tenantContext.TenantId, userId, userName, request, cancellationToken).ConfigureAwait(false);
+        var result = await _lifecycleService.AddNoteAsync(id, _tenantContext.TenantId, userId, userId, request, cancellationToken).ConfigureAwait(false);
         return CreatedAtAction(nameof(GetByIdAsync), new { id }, result);
     }
 

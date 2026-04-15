@@ -17,7 +17,7 @@ public interface INotificationsConfigService
     Task<List<MaintenanceWindowDto>> GetMaintenanceWindowsAsync(string tenantId, CancellationToken ct = default);
     Task<MaintenanceWindowDto> CreateMaintenanceWindowAsync(string tenantId, string userId, CreateMaintenanceWindowRequest request, CancellationToken ct = default);
     Task DeleteMaintenanceWindowAsync(string id, string tenantId, CancellationToken ct = default);
-    Task<List<NotificationDeliveryLogDto>> GetDeliveryLogsAsync(string tenantId, string? eventId, string? status, DateTimeOffset? from, DateTimeOffset? to, int limit, CancellationToken ct = default);
+    Task<List<NotificationDeliveryLogDto>> GetDeliveryLogsAsync(string tenantId, string? eventId, int limit, CancellationToken ct = default);
     Task<ServiceNowConfigDto?> GetServiceNowConfigAsync(string tenantId, CancellationToken ct = default);
     Task<ServiceNowConfigDto> UpsertServiceNowConfigAsync(string tenantId, string userId, UpsertServiceNowConfigRequest request, CancellationToken ct = default);
 }
